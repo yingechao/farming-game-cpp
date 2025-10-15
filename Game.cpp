@@ -34,23 +34,13 @@ float Game::getCurrentTime() const {
   return ms / 1000.0f;
 }
 
-// Game Start
 void Game::startGame() {
+  // start with Spring
+  currentSeason = new Season("Spring", timeLimit);
+  currentSeedIndex = 0;
+  currentSeed = currentSeason->getSeeds()[currentSeedIndex];
   isGameOver = false;
-  currentLevel = 1;
-  player.resetProgress();
-
-  currentSeason = new Spring();  // first season
-  for (Seed* s : currentSeason->getSeeds()) {
-    player.addSeed(s);
-  }
-
-  // Automatically select first seed
-  if (!currentSeason->getSeeds().empty()) {
-    player.selectSeed(currentSeason->getSeeds()[0]->get_Name());
-  }
-
-  currentSeedStartTime = getCurrentTime();
+  std::cout << "\n🌸 Starting Spring season!\n";
 }
 
 // Start the current level
@@ -132,27 +122,6 @@ int Game::harvestCurrentSeed() {
   return earned;
 }
 
-void Game::advanceSeed() {
-  if (!currentSeason) return;
-
-  currentSeedIndex++;  // move to next seed
-  if (currentSeedIndex >= currentSeason->getSeeds().size()) {
-    // season completed
-    currentSeason->endSeason();
-    currentSeedIndex = 0;  // reset for next season
-    currentSeedStartTime = getCurrentTime();
-    // Optionally, deselect currentSeed in player
-    player.currentSeed = nullptr;
-  } else {
-    // select the next seed for the player automatically
-    Seed* nextSeed = currentSeason->getSeeds()[currentSeedIndex];
-    if (nextSeed) {
-      player.selectSeed(nextSeed->get_Name());
-      currentSeedStartTime = getCurrentTime();
-    }
-  }
-}
-
 // Access player
 Player& Game::getPlayer() { return player; }
 Season* Game::getCurrentSeason() { return currentSeason; }
@@ -167,30 +136,44 @@ Seed* Game::getCurrentSeed() {
   return seeds[currentSeedIndex];
 }
 
-void Game::nextLevel() {
-  // Clear old seeds from player
-  player.resetProgress();
+//
+void Game::advanceSeed() {
+  if (!currentSeason) return;
 
-  // Delete old season
-  if (currentSeason) delete currentSeason;
-
-  if (currentSeasonIndex == 0) {
-    currentSeason = new Summer();  // move to Summer
-    currentSeasonIndex = 1;
+  // Move to next seed in the current season
+  if (currentSeedIndex + 1 <
+      static_cast<int>(currentSeason->getSeeds().size())) {
+    currentSeedIndex++;
+    currentSeed = currentSeason->getSeeds()[currentSeedIndex];
   } else {
-    currentSeason = nullptr;  // no more seasons
-    isGameOver = true;
-    return;
+    // All seeds in this season are done → move to next season
+    nextLevel();
   }
+}
 
-  currentSeedIndex = 0;
-
-  // Assign new seeds to player
-  for (Seed* s : currentSeason->getSeeds()) player.addSeed(s);
-
-  // Select first seed
-  if (!currentSeason->getSeeds().empty())
-    player.selectSeed(currentSeason->getSeeds()[0]->get_Name());
-
-  currentSeason->start_Season();
+void Game::nextLevel() {
+  // Move to next season
+  if (currentSeason->get_Name() == "Spring") {
+    delete currentSeason;
+    currentSeason = new Season("Summer", timeLimit);
+    currentSeedIndex = 0;
+    currentSeed = currentSeason->getSeeds()[currentSeedIndex];
+    std::cout << "\n Summer has begun!\n";
+  } else if (currentSeason->get_Name() == "Summer") {
+    delete currentSeason;
+    currentSeason = new Season("Autumn", timeLimit);
+    currentSeedIndex = 0;
+    currentSeed = currentSeason->getSeeds()[currentSeedIndex];
+    std::cout << "\n Autumn has begun!\n";
+  } else if (currentSeason->get_Name() == "Autumn") {
+    delete currentSeason;
+    currentSeason = new Season("Winter", timeLimit);
+    currentSeedIndex = 0;
+    currentSeed = currentSeason->getSeeds()[currentSeedIndex];
+    std::cout << "\n  Winter has begun!\n";
+  } else {
+    // All seasons completed — end game
+    std::cout << "\n All seasons completed! Game Over.\n";
+    endGame();
+  }
 }

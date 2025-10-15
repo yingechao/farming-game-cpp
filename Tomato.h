@@ -5,7 +5,7 @@
 
 class Tomato : public Seed {
  public:
-  Tomato() : Seed("Tomato", 6, 15) {}
+  Tomato();
   void grow() override;
   int harvest() override;
   void reset() override;

@@ -15,6 +15,7 @@ class Game {
   float currentSeedStartTime;
   int currentSeedIndex = 0;
   int currentSeasonIndex = 0;
+  Seed* currentSeed;
 
  public:
   Season* currentSeason;

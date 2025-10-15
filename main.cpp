@@ -80,7 +80,7 @@ int main() {
 
   std::cout << "\n Game Over! Final Score: " << player.getPoints()
             << " points.\n";
-  std::cout << "Thanks for playing, " << player.getName() << "\n";
+  std::cout << "Thanks for playing, " << player.getName() << "!\n";
 
   return 0;
 }
