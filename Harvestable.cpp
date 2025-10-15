@@ -9,3 +9,16 @@ this->growthProgress = growthProgress;
 int Harvestable::getStatus(){
     return growthProgress;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
