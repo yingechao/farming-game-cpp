@@ -6,8 +6,8 @@
 
 #include "Spring.h"
 #include "Summer.h"
-// #include "Autumn.h"
-// #include "Winter.h"
+#include "Autumn.h"
+#include "Winter.h"
 
 using namespace std;
 

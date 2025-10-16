@@ -9,6 +9,12 @@
 #include "Tomato.h"
 #include "Wheat.h"
 using namespace std;
+#include "Beetroot.h"
+#include "Carrot.h"
+#include "Kale.h"
+#include "Lettuce.h"
+#include "Peas.h"
+#include "Onion.h"
 
 // Constructor
 Season::Season(std::string seasonName, int limit)
@@ -35,13 +41,13 @@ void Season::loadSeeds() {
     seeds.push_back(new Wheat());
     seeds.push_back(new Eggplant());
   } else if (name == "Autumn") {
-    // seeds.push_back(new Pumpkin());
-    // seeds.push_back(new Yam());
-    // seeds.push_back(new Cranberry());
+    seeds.push_back(new Carrot());
+    seeds.push_back(new Lettuce());
+    seeds.push_back(new Peas());
   } else if (name == "Winter") {
-    // seeds.push_back(new SnowYam());
-    // seeds.push_back(new WinterRoot());
-    // seeds.push_back(new Holly());
+    seeds.push_back(new Kale());
+    seeds.push_back(new Beetroot());
+    seeds.push_back(new Onion());
   }
 
   currentSeedIndex = 0;  // unlock first seed
