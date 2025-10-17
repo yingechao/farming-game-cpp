@@ -2,7 +2,9 @@
 
 #include <iostream>
 
-Strawberry::Strawberry() : Seed("Strawberry", 7, 15) {}
+Strawberry::Strawberry() : Seed("Strawberry", 7, 15) {
+  pointsUnlockThreshold = 20;
+}
 
 void Strawberry::plant() {
   std::cout << "Planting Strawberry specifically!\n";

@@ -59,24 +59,28 @@ int main() {
         break;
       }
 
-      if (input == "plant") {
+      if (input == "plant" && seasonPoints >= currentSeed->getPointsUnlockThreshold()) {
         // Plant whatever is currently selected in the Game
         game.plantCurrentSeed();
         flagOn = false;
-      } else {
+      } else if (input == "1" || input =="2" || input == "3") {
         // Numeric selection: update the game's current seed (1-based index)
         int idx = std::stoi(input);
         Seed* sel = game.selectNewSeed(idx);
         if (sel) {
+          if (seasonPoints >= sel->getPointsUnlockThreshold()){
           currentSeed = sel;
           std::cout << "Selected seed: " << currentSeed->get_Name() << "\n";
-        } else {
-          std::cout << "Invalid selection\n";
+          }else {
+            std::cout << "This seed is locked. Earn more points to unlock. " << std::endl;
+          }
+        }
+       } else if (input =="plant"){
+          std::cout << "Invalid selection. Please choose another seed. \n";
         }
         // continue the loop so user can type 'plant' when ready
       }
-    }
-
+    
     // Grow
     std::cout << "Type 'grow' to grow the seed: ";
     std::cin >> input;
@@ -99,19 +103,22 @@ int main() {
     }
     // Harvest and award points via the Game API (centralized)
     int earnedPoints = game.harvestCurrentSeed();
-  seasonPoints += earnedPoints;
+    seasonPoints += earnedPoints;
 
-    // Check if season is about to end (last seed)
-    if (currentSeason->getSeeds().back() == currentSeed) {
-      std::cout << "\nSeason " << currentSeason->get_Name()
-                << " completed! Points this season: " << seasonPoints << "\n";
-      player.resetProgress();
+      // If all seeds in the current season have been harvested, advance to
+      // the next season immediately. 
+      if (game.checkProgress()) {
+        Season* completedSeason = game.getCurrentSeason();
+        std::cout << "\nSeason " << (completedSeason ? completedSeason->get_Name() : std::string("?"))
+                  << " completed! Points this season: " << seasonPoints << "\n";
+        player.resetProgress();
+        seasonPoints = 0;  // reset for next season
+        game.nextLevel();
+        continue;  // start loop for the new season
+      }
 
-      seasonPoints = 0;  // reset for next season
-    }
-
-    // Advance to next seed or next season
-    game.advanceSeed();
+      // Advance to next seed in the current season
+      game.advanceSeed();
   }
 
   std::cout << "\n Game Over! Final Score: " << player.getPoints()

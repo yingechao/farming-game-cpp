@@ -2,7 +2,9 @@
 
 #include <iostream>
 
-Tomato::Tomato() : Seed("Tomato", 9, 24) {}  // initialize base Seed
+Tomato::Tomato() : Seed("Tomato", 9, 24) {
+  pointsUnlockThreshold = 0;
+}  // initialize base Seed
 
 void Tomato::grow() {
   std::cout << name << " is growing for " << growTime << " seconds.\n";

@@ -9,6 +9,7 @@ class Seed {
   float growTime;
   int value;
   bool isHarvested;
+  int pointsUnlockThreshold;
 
  public:
   Seed(std::string seedName, float timeToGrow, int val);
@@ -16,6 +17,7 @@ class Seed {
   std::string get_Name() const;
   float get_GrowTime() const;
   int get_Value() const;
+  int getPointsUnlockThreshold();
   bool get_HarvestStatus() const;
   bool isReadyToHarvest() const;
   virtual void plant();

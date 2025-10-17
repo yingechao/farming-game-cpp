@@ -3,7 +3,9 @@
 
 #include "Seed.h"
 
-Carrot::Carrot() : Seed("Carrot", 9, 22) {}
+Carrot::Carrot() : Seed("Carrot", 9, 22) {
+    pointsUnlockThreshold = 0;
+}
 
 void Carrot::grow() {
   std::cout << name << " is growing for " << growTime << " seconds.\n";
