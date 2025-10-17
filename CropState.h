@@ -16,6 +16,7 @@ class CropState {
   string stateName;
 
   int getGrowthProgress();
+  void setGrowthProgress(int growthProgress);
   void updateGrowth();
   void getStatus();
   bool isDoneGrowing();

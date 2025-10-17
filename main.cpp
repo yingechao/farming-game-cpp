@@ -31,15 +31,51 @@ int main() {
 
     std::string input;
 
-    // Plant
-    std::cout << "Type 'plant' to plant this seed: ";
-    std::cin >> input;
-    if (input != "plant") {
-      std::cout << "You failed to plant the seed. Game Over!\n";
-      game.endGame();
-      break;
+    // Show the season's available seeds (this matches Game's internal ordering)
+    auto* season = game.getCurrentSeason();
+    std::vector<Seed*>& seeds = season->getSeeds();
+    std::cout << "Available seeds (choose index): ";
+    for (size_t i = 0; i < seeds.size(); ++i) {
+      if (seeds[i])
+        std::cout << seeds[i]->get_Name() << " (" << (i + 1) << ") ";
+      else
+        std::cout << "(null) (" << (i + 1) << ") ";
     }
-    game.plantCurrentSeed();
+    //////////////
+
+    std::cout << std::endl;
+
+    // while loop to select and replant certain seeds
+    bool flagOn = true;
+    while (flagOn == true) {
+      std::cout << "Type 'plant' to plant this seed, or enter the index "
+                   "indicated in brackets () to select another seed: ";
+      std::cin >> input;
+
+      // Validate input
+      if (input != "plant" && input != "1" && input != "2" && input != "3") {
+        std::cout << "You failed to plant the seed. Game Over!\n";
+        game.endGame();
+        break;
+      }
+
+      if (input == "plant") {
+        // Plant whatever is currently selected in the Game
+        game.plantCurrentSeed();
+        flagOn = false;
+      } else {
+        // Numeric selection: update the game's current seed (1-based index)
+        int idx = std::stoi(input);
+        Seed* sel = game.selectNewSeed(idx);
+        if (sel) {
+          currentSeed = sel;
+          std::cout << "Selected seed: " << currentSeed->get_Name() << "\n";
+        } else {
+          std::cout << "Invalid selection\n";
+        }
+        // continue the loop so user can type 'plant' when ready
+      }
+    }
 
     // Grow
     std::cout << "Type 'grow' to grow the seed: ";
@@ -61,16 +97,16 @@ int main() {
       game.endGame();
       break;
     }
-
-    // Harvest points BEFORE advancing
-    int earnedPoints = currentSeed->harvest();
-    player.addPoints(earnedPoints);
-    seasonPoints += earnedPoints;
+    // Harvest and award points via the Game API (centralized)
+    int earnedPoints = game.harvestCurrentSeed();
+  seasonPoints += earnedPoints;
 
     // Check if season is about to end (last seed)
     if (currentSeason->getSeeds().back() == currentSeed) {
       std::cout << "\nSeason " << currentSeason->get_Name()
                 << " completed! Points this season: " << seasonPoints << "\n";
+      player.resetProgress();
+
       seasonPoints = 0;  // reset for next season
     }
 

@@ -110,6 +110,8 @@ bool Game::isSeedTimeUp(float seedGrowTime) const {
 void Game::plantCurrentSeed() {
   Seed* s = getCurrentSeed();
   if (!s) return;
+  // If this seed was previously harvested, reset it so it can be planted again.
+  s->reset();
   currentSeedStartTime = getCurrentTime();
   s->plant();
 }
@@ -119,6 +121,8 @@ int Game::harvestCurrentSeed() {
   if (!seed) return 0;
   int earned = seed->harvest();  // returns seed value
   player.addPoints(earned);
+  // Show player's updated total after each harvest
+  std::cout << "Total points: " << player.getPoints() << "\n";
   return earned;
 }
 
@@ -136,6 +140,24 @@ Seed* Game::getCurrentSeed() {
   return seeds[currentSeedIndex];
 }
 
+Seed* Game::selectNewSeed(int a){
+  if (!currentSeason) return nullptr;
+  std::vector<Seed*>& seeds = currentSeason->getSeeds();
+ 
+  if (seeds.empty()) return nullptr;
+
+  // Treat `a` as a 1-based index coming from the UI (input "1" -> first seed).
+  int idx = a - 1;
+  if (currentSeedIndex < 0 || currentSeedIndex >= seeds.size()) return nullptr;
+
+  // Update the authoritative index and pointer so other Game methods
+  // (getCurrentSeed, plantCurrentSeed, advanceSeed, etc.) operate on the
+  // same selected seed.
+  this->currentSeedIndex = idx;
+  this->currentSeed = seeds[idx];
+  return seeds[idx];
+}
+
 //
 void Game::advanceSeed() {
   if (!currentSeason) return;
@@ -146,8 +168,14 @@ void Game::advanceSeed() {
     currentSeedIndex++;
     currentSeed = currentSeason->getSeeds()[currentSeedIndex];
   } else {
-    // All seeds in this season are done → move to next season
-    nextLevel();
+    // Reached the end of the seed list. Only advance to next season if all
+    // seeds have actually been harvested. This prevents progressing when a
+    // player has selected or planted the last seed but not harvested it.
+    if (currentSeason->allSeedsCompleted()) {
+      nextLevel();
+    } else {
+      std::cout << "Cannot advance: not all seeds have been harvested yet.\n";
+    }
   }
 }
 

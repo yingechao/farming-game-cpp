@@ -2,7 +2,7 @@
 #define GAME_HPP
 
 #include <chrono>
-
+#include "Seed.h"
 #include "Player.h"
 #include "Season.h"
 
@@ -37,6 +37,8 @@ class Game {
   bool isSeedTimeUp(float seedGrowTime) const;
 
   Seed* getCurrentSeed();
+  Seed* selectNewSeed(int a);
+
   void plantCurrentSeed();
   int harvestCurrentSeed();
   void advanceSeed();

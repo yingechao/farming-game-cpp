@@ -27,8 +27,7 @@ class Player {
   int getPoints() const;
   std::string getName();
   void setName(const std::string& playerName);
-  void selectSeed(string seedType);
-
+  Seed* selectSeed(Seed* s);
   void plantSeed();
   void growCrop();
   void harvestCrop();

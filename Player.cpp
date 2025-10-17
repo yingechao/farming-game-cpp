@@ -26,6 +26,7 @@ bool Player::hasCompletedSeason() {
 int Player::getPoints() const { return points; }
 std::string Player::getName() { return name; }
 
+/* 
 void Player::selectSeed(string seedType) {
   for (auto seed : seedsOwned) {
     if (seed->get_Name() == seedType) {
@@ -35,6 +36,19 @@ void Player::selectSeed(string seedType) {
     }
   }
   cout << "Seed " << seedType << " not found!" << endl;
+}
+  */
+
+  Seed* Player::selectSeed(Seed* s) {
+  for (auto seed : seedsOwned) {
+    if (seed->get_Name() == s->get_Name()) {
+      currentSeed = seed;
+      cout << "Selected seed: " << seed->get_Name() << endl;
+      return currentSeed;
+    }
+  }
+  cout << "Seed " << s->get_Name() << " not found!" << endl;
+  return nullptr;
 }
 
 void Player::plantSeed() {
@@ -73,7 +87,14 @@ void Player::resetProgress() {
 }
 
 void Player::addSeed(Seed* s) {
-  if (s) seedsOwned.push_back(s);
+  if (!s) return;
+
+  // Avoid adding duplicates: check if this pointer is already present.
+  for (Seed* existing : seedsOwned) {
+    if (existing == s) return;
+  }
+
+  seedsOwned.push_back(s);
 }
 
 void Player::setSeeds(const std::vector<Seed*>& seeds) { seedsOwned = seeds; }

@@ -19,14 +19,17 @@ void Seed::grow() {
 }
 
 int Seed::harvest() {
-  if (!isHarvested) {
-    isHarvested = true;
-    std::cout << name << " harvested! +" << value << " points.\n";
+      std::cout << name << " harvested! +" << value << " points.\n";
     return value;
-  } else {
-    std::cout << name << " was already harvested!\n";
-    return 0;
-  }
+
+  // if (!isHarvested) {
+  //   isHarvested = true;
+  //   std::cout << name << " harvested! +" << value << " points.\n";
+  //   return value;
+  // } else {
+  //   std::cout << name << " was already harvested!\n";
+  //   return 0;
+  // }
 }
 
 void Seed::reset() { isHarvested = false; }
