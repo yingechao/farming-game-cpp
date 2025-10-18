@@ -11,15 +11,16 @@ class Game {
   int currentLevel;
   int timeLimit;
   bool isGameOver;
-  float getCurrentTime() const;
-  float currentSeedStartTime;
+  double getCurrentTime() const;
+  double currentSeedStartTime;
   int currentSeedIndex = 0;
   int currentSeasonIndex = 0;
   Seed* currentSeed;
+  int seasonStartScore;
 
  public:
   Season* currentSeason;
-  float startTime;
+  std::chrono::steady_clock::time_point startTime;
   Player player;
 
   Game();   //  constructor
@@ -34,7 +35,7 @@ class Game {
   void endGame();
 
   bool isGameOverStatus() { return isGameOver; }
-  bool isSeedTimeUp(float seedGrowTime) const;
+  bool isSeedTimeUp(double seedGrowTime) const;
 
   Seed* getCurrentSeed();
   Seed* selectNewSeed(int a);

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <limits>
 
 #include "Game.h"
 
@@ -18,18 +19,43 @@ int main() {
 
   game.startGame();  // starts Spring
 
+
   int seasonPoints = 0;
 
   while (!game.isGameOverStatus()) {
-    Seed* currentSeed = game.getCurrentSeed();
-    Season* currentSeason = game.getCurrentSeason();
+  Seed* currentSeed = game.getCurrentSeed();
+  Season* currentSeason = game.getCurrentSeason();
     if (!currentSeed || !currentSeason) break;
+
+    // If season time expired, delegate handling to the Game (it will print
+    // whether required points were reached and either advance or restart).
+    if (game.isTimeUp()) {
+      game.handleTimeOut();
+      seasonPoints = 0;
+      continue;
+    }
+
+    // Minimal wall-clock countdown: compute elapsed since Game::startTime and
+    // show remaining seconds for the current season. This uses steady wall
+    // clock math compatible with Game::getCurrentTime() which stores seconds
+    // since epoch in `startTime`.
+    {
+      using namespace std::chrono;
+      auto now = steady_clock::now();
+      auto elapsed = duration_cast<seconds>(now - game.startTime).count();
+      int remaining = 0;
+      if (currentSeason->getTimeLimit() - elapsed > 0)
+        remaining = static_cast<int>(currentSeason->getTimeLimit() - elapsed);
+      else
+        remaining = 0;
+      std::cout << "[Time remaining in " << currentSeason->get_Name() << ": " << remaining << "s]\n";
+    }
 
     std::cout << "\nSelected seed: " << currentSeed->get_Name()
               << " - Grow time: " << currentSeed->get_GrowTime()
               << " seconds\n";
 
-    std::string input;
+  std::string input;
 
     // Show the season's available seeds (this matches Game's internal ordering)
     auto* season = game.getCurrentSeason();
@@ -69,17 +95,22 @@ int main() {
         Seed* sel = game.selectNewSeed(idx);
         if (sel) {
           if (seasonPoints >= sel->getPointsUnlockThreshold()){
-          currentSeed = sel;
-          std::cout << "Selected seed: " << currentSeed->get_Name() << "\n";
-          }else {
+            currentSeed = sel;
+            std::cout << "Selected seed: " << currentSeed->get_Name() << "\n";
+          } else {
             std::cout << "This seed is locked. Earn more points to unlock. " << std::endl;
           }
         }
-       } else if (input =="plant"){
-          std::cout << "Invalid selection. Please choose another seed. \n";
-        }
-        // continue the loop so user can type 'plant' when ready
+      } else if (input == "plant"){
+        std::cout << "Invalid selection. Please choose another seed. \n";
       }
+      // continue the loop so user can type 'plant' when ready
+    }
+
+    // If the inner selection loop ended because the game was set to over,
+    // stop the outer loop immediately so no further actions (grow/harvest)
+    // are performed in this iteration.
+    if (game.isGameOverStatus()) break;
     
     // Grow
     std::cout << "Type 'grow' to grow the seed: ";
@@ -91,7 +122,7 @@ int main() {
     }
     currentSeed->grow();
     std::this_thread::sleep_for(
-        std::chrono::seconds(static_cast<int>(currentSeed->get_GrowTime())));
+        std::chrono::seconds(static_cast<int>(currentSeed->get_GrowTime()))); 
 
     // Harvest
     std::cout << "Type 'harvest' to harvest the seed: ";
