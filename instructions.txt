@@ -1,0 +1,14 @@
+Welcome to Farm Game!
+
+How to Play:
+1. Click START to begin a new game.
+2. Plant seeds and harvest crops to earn coins.
+3. Use coins to buy more seeds and tools.
+
+Tips:
+- Save often.
+- Different crops grow at different speeds.
+
+Controls:
+- Mouse for menus.
+- ESC to pause or go back.

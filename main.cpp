@@ -5,7 +5,7 @@
 
 #include "Game.h"
 
-int main() {
+void RunConsoleGame() {
   Game game;
   Player& player = game.getPlayer();
 
@@ -118,5 +118,5 @@ int main() {
             << " points.\n";
   std::cout << "Thanks for playing, " << player.getName() << "!\n";
 
-  return 0;
+  return;
 }
