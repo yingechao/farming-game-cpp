@@ -3,7 +3,9 @@
 
 #include "Seed.h"
 
-Onion::Onion() : Seed("Onion", 14, 30) {}
+Onion::Onion() : Seed("Onion", 14, 30) {
+    pointsUnlockThreshold = 100;
+}
 
 void Onion::grow() {
   std::cout << name << " is growing for " << growTime << " seconds.\n";

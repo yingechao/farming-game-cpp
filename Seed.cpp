@@ -38,3 +38,7 @@ void Seed::plant() {
   std::cout << "Planting " << name << "...\n";
   grow();
 }
+
+int Seed::getPointsUnlockThreshold(){
+  return pointsUnlockThreshold;
+}

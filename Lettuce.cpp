@@ -3,7 +3,9 @@
 
 #include "Seed.h"
 
-Lettuce::Lettuce() : Seed("Lettuce", 9, 24) {}
+Lettuce::Lettuce() : Seed("Lettuce", 9, 24) {
+    pointsUnlockThreshold = 50;
+}
 
 void Lettuce::grow() {
   std::cout << name << " is growing for " << growTime << " seconds.\n";

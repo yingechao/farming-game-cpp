@@ -3,7 +3,9 @@
 
 #include "Seed.h"
 
-Cauliflower::Cauliflower() : Seed("Cauliflower", 10, 20) {}
+Cauliflower::Cauliflower() : Seed("Cauliflower", 10, 20) {
+  pointsUnlockThreshold = 55;
+}
 
 void Cauliflower::grow() {
   std::cout << name << " is growing for " << growTime << " seconds.\n";

@@ -2,7 +2,9 @@
 
 #include <iostream>
 
-Eggplant::Eggplant() : Seed("Eggplant", 8, 18) {}
+Eggplant::Eggplant() : Seed("Eggplant", 8, 18) {
+    pointsUnlockThreshold = 60;
+}
 
 void Eggplant::grow() {
   std::cout << name << " is growing for " << growTime << " seconds.\n";

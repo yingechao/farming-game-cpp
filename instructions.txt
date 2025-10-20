@@ -2,13 +2,18 @@ Welcome to Farm Game!
 
 How to Play:
 1. Click START to begin a new game.
-2. Plant seeds and harvest crops to earn coins.
-3. Use coins to buy more seeds and tools.
-
-Tips:
-- Save often.
-- Different crops grow at different speeds.
+2. Plant seeds and harvest crops to earn points.
+3. Use the WASD keyboard to move between the grid.
+4. Use mouse to click on the preferred seed 
+and press spacebar to plant.
+5. Wait the required growth time until the crops 
+are ready and press H to harvest.
+6. Continue earning points to unlock the next 
+crop until all 3 have been unlocked.
+7. Once all crops have been unlocked, planted and harvested, 
+the player progresses to the next season.
 
 Controls:
 - Mouse for menus.
 - ESC to pause or go back.
+- Use WASD to navigate grid

@@ -1,537 +1,769 @@
-// FarmingGrid.cpp – self-contained farming window
+// FarmingGrid.cpp 
 #include "raylib.h"
 #include <string>
-#include <cstdio>   // for snprintf (optional)
+#include <cstdio> // for snprintf
 
-// ------------------------------ CONSTANTS ------------------------------
-
-// Window size for the farming screen
-const int FARM_SCREEN_WIDTH  = 1000;
-const int FARM_SCREEN_HEIGHT = 640;
-
-// Frames per second (how often the screen updates)
-const int TARGET_FPS = 60;
-
-// Game rules
-const int NUMBER_OF_PLOTS  = 4;  // 2x2 grid
-
-// How long one season lasts (in seconds). You can change this.
-const float SEASON_TIME_SECONDS = 60.0f;
-
-// ------------------------------ DATA TYPES -----------------------------
-
-// A single crop type (for one season)
-struct CropDef {
-    std::string name;   // name to show in the inventory
-    int unlockPoints;   // how many points you need to unlock this crop
-    int yieldPoints;    // how many points you get when you harvest it
-    float growSeconds;  // how long it takes to grow
-    Color color;        // a color used while it is growing (for visuals)
+//Defines crop behaviour in its respective seasons
+struct CropAttributes {
+    std::string name;      // inventory name
+    int   thresholdUnlock; // points needed to unlock next crop
+    int   totalPoints;     // points gained on harvest of each crop
+    float growingTime;     // growth time
+    Color color;           // visual while growing
 };
 
-// One grid square (plot) where a crop can be planted
 struct Plot {
-    Rectangle rect;  // where it is drawn
-    int state;       // 0 = Empty, 1 = Growing, 2 = Ready to harvest
-    int cropIndex;   // which crop is planted here (0..2) or -1 for none
-    float timeLeft;  // time left to grow (only used when state == 1)
+    Rectangle grid;   // draw rect
+    int   state;      // 0 empty, 1 growing, 2 ready
+    int   cropIndex;  // 0..2 or -1 none
+    float timeRemaining;   // countdown until the crop is ready to be harvested
 
-    void Clear() {
-        state = 0;
-        cropIndex = -1;
-        timeLeft = 0.0f;
+    void Clear() { 
+        state = 0; 
+        cropIndex = -1; 
+        timeRemaining = 0.0f; 
     }
 };
 
-// Game state while we are on the farming screen
 struct GameState {
-    int seasonIndex;                   // 0..3 (Spring, Summer, Autumn, Winter)
-    float seasonTimeLeft;              // countdown timer for the season
-    int totalPoints;                   // points earned THIS season
-    bool harvested[3];   // which crops have been harvested this season
-    int selectedPlot;                  // which plot the player has selected (0..3)
-    int selectedCrop;                  // which crop is selected in the inventory (0..2)
-    bool allSeasonsCompleted;          // true after Winter is completed
+    int   seasonIndex;         // 0 = Spring, 1 = Sumer, 2 = Autumn, 3 = Winter
+    float seasonTimeLeft;      // season timer (seconds)
+    int   totalPoints;         // points collected this season
+    bool  harvested[3];        // which crops harvested
+    int   selectPlot;          // 0..3
+    int   selectCrop;          // 0..2
+    bool  allSeasonsCompleted; // after Winter is completed and all goals met
 };
 
-// ------------------------------ SEASONS -------------------------------
+int FARM_SCREEN_WIDTH  = 1000;
+int FARM_SCREEN_HEIGHT = 640;
+int TARGET = 60;
+float SEASON_TIME_SECONDS = 60.0f;
 
-enum Season { SPRING = 0, SUMMER = 1, AUTUMN = 2, WINTER = 3 };
+namespace {
 
-const char* SEASON_NAMES[4] = {
-    "Spring", "Summer", "Autumn", "Winter"
+const char* SEASONS[4] = { 
+    "Spring", 
+    "Summer", 
+    "Autumn", 
+    "Winter" 
 };
 
-// You can adjust these numbers later to match your repository values.
-// These are simple, readable starter values.
-const CropDef SPRING_CROPS[3] = {
-    { "Cauliflower",      0, 10, 5.0f,  Color{180,220,180,255} },
-    { "Potato",       25, 18, 6.0f,  Color{120,200,140,255} },
-    { "Strawberry",60, 30, 8.0f,  Color{240,120,140,255} }
+//Crops that are available in each season, their point threshold, value and time limit they 
+//take to grow along with their coloring
+static CropAttributes SPRING_CROPS[3] = {
+    { "Potato",      0, 10,  5.0f, Color{180,220,180,255} },
+    { "Strawberry", 45, 13,  7.0f, Color{120,200,140,255} },
+    { "Cauliflower",90, 16, 10.0f, Color{240,120,140,255} }
+};
+static CropAttributes SUMMER_CROPS[3] = {
+    { "Tomato",    0, 15,  9.0f, Color{220,120,120,255} },
+    { "Wheat",    60, 18, 11.0f, Color{230,200,110,255} },
+    { "Eggplant", 120, 21, 13.0f, Color{160,220,160,255} }
+};
+static CropAttributes AUTUMN_CROPS[3] = {
+    { "Carrot",    0, 22,  11.0f, Color{255,180,100,255} },
+    { "Lettuce",  50, 25,  13.0f, Color{180, 60, 80,255} },
+    { "Peas",     70, 28,  15.0f, Color{230,170, 90,255} }
+};
+static CropAttributes WINTER_CROPS[3] = {
+    { "Kale",      0, 26, 10.0f, Color{120,180,140,255} },
+    { "Beetroot", 25, 29, 13.0f, Color{170,220,170,255} },
+    { "Onion",   100, 32, 16.0f, Color{160,200,160,255} }
 };
 
-const CropDef SUMMER_CROPS[3] = {
-    { "Tomato",      0, 12, 5.5f, Color{220,120,120,255} },
-    { "Wheat",      30, 22, 7.0f,  Color{230,200,110,255} },
-    { "Eggplant",70, 42, 9.5f,  Color{160,220,160,255} }
-};
-
-const CropDef AUTUMN_CROPS[3] = {
-    { "Carrot",      0, 10, 5.0f,  Color{255,180,100,255} },
-    { "Lettuce",  28, 20, 7.0f,  Color{180, 60, 80,255} },
-    { "Peas",   65, 40, 10.0f, Color{230,170,90,255} }
-};
-
-const CropDef WINTER_CROPS[3] = {
-    { "Kale",        0, 10, 6.0f,  Color{120,180,140,255} },
-    { "Beetroot",      25, 20, 7.5f,  Color{170,220,170,255} },
-    { "Onion",   60, 36, 9.5f,  Color{160,200,160,255} }
-};
-
-// Return a pointer to the 3 crops for the given season
-const CropDef* GetSeasonCrops(int seasonIndex) {
-    if (seasonIndex == SPRING)  return SPRING_CROPS;
-    if (seasonIndex == SUMMER)  return SUMMER_CROPS;
-    if (seasonIndex == AUTUMN)  return AUTUMN_CROPS;
-    /* else */                  return WINTER_CROPS;
-}
-
-// --------------------------- SMALL HELPERS ----------------------------
-
-// Simple “mouse inside rectangle” check
-bool MouseInsideFarming(Rectangle r) {
-    Vector2 m = GetMousePosition();
-    if (m.x < r.x) return false;
-    if (m.x > r.x + r.width) return false;
-    if (m.y < r.y) return false;
-    if (m.y > r.y + r.height) return false;
-    return true;
-}
-
-// Did the user click inside r with the left mouse button this frame?
-bool WasClicked(Rectangle r) {
-    if (MouseInsideFarming(r) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-        return true;
+//This function returns the list of crops for the current seasons
+CropAttributes* GetSeasonCrops(int seasonIndex) {
+    if (seasonIndex == 0){
+        return SPRING_CROPS;
+    } else if (seasonIndex == 1){
+        return SUMMER_CROPS;
+    } else if (seasonIndex == 2){
+        return AUTUMN_CROPS;
+    } else {
+        return WINTER_CROPS;
     }
-    return false;
 }
 
-// Center a piece of text horizontally on the screen
-int CenterX(const std::string& text, int fontSize, int screenWidth) {
+//Color for the headers
+Color GetSeasonColor(int seasonIndex) { 
+    if (seasonIndex == 0){ 
+        return Color{255,182,193,255}; //Pink 
+    } else if (seasonIndex == 1){ 
+        return GOLD; 
+    } else if (seasonIndex == 2){ 
+        return ORANGE; 
+    } else if (seasonIndex == 3){ 
+        return BLUE; 
+    } else { 
+        return BLACK; //when user wins 
+    } 
+}
+
+} // end anonymous namespace
+
+//Same from the Opening File
+bool isMouseInside(Rectangle area) {
+
+    //Built in library function that helps to determine the x and y coordinates of the mouse
+    Vector2 position = GetMousePosition();
+
+    // Determine if the mouse's x coordinate is within the rectangles width range
+    bool inside_horizontal = false;
+    if (position.x >= area.x && position.x <= area.x + area.width){
+        inside_horizontal = true;
+    }
+    //Determine if the mouse's y coordinate is within the rectangles height range
+    bool inside_vertical = false;
+    if (position.y >= area.y && position.y <= area.y + area.height){
+        inside_vertical = true;
+    }
+    
+    //If both x and y are within the ranges of the rectangle, then it returns true and the mouse is within the rectangle
+    if (inside_horizontal && inside_vertical){
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool isUsed(Rectangle btn) {
+    //Check if the mouse is within the button area
+    bool mouseInside = isMouseInside(btn);
+
+    //Check if the mouse button was pressed
+    bool mousePressed = false;
+    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
+        mousePressed = true;
+    }
+
+    if (mouseInside && mousePressed){
+        return true;
+    } else {
+        return false;
+    }
+}
+
+//centers the text by finding the posotion and aliging
+int centeredT(std::string& text, int fontSize, int screenWidth) {
+    // Determine width of text in pixels
     int textWidth = MeasureText(text.c_str(), fontSize);
-    return (screenWidth - textWidth) / 2;
+
+    // Determine the position of the text and place it in the center with equal space on either side
+    int extraSpace = screenWidth - textWidth;
+    int centered = extraSpace / 2;
+
+    return centered; // return the x coordinate for centered text
 }
 
-// Is a crop unlocked yet?
-bool IsCropUnlocked(const GameState& gs, int cropIndex) {
-    const CropDef* crops = GetSeasonCrops(gs.seasonIndex);
-    if (gs.totalPoints >= crops[cropIndex].unlockPoints) return true;
-    return false;
+bool cropUnlocked(GameState& game, int cropIndex) {
+    if (cropIndex < 0 || cropIndex > 2){
+        return false; // out of bounds, just a sanity check
+    }
+
+    CropAttributes* crops = GetSeasonCrops(game.seasonIndex);
+    int pointsNeeded = crops[cropIndex].thresholdUnlock;
+    int playerPts = game.totalPoints;
+
+    //To determine if the crop has been unlocked
+    bool unlocked = false;
+    if (playerPts >= pointsNeeded){
+        unlocked = true;
+    }
+    return unlocked;
 }
 
-// Did we harvest all three crops this season?
-bool HarvestedAllThree(const GameState& gs) {
-    if (gs.harvested[0] && gs.harvested[1] && gs.harvested[2]) return true;
-    return false;
+// beginner-style helper: check if all 3 crops are harvested
+bool HarvestedAllThree(GameState& g) {
+    bool first  = g.harvested[0];
+    bool second = g.harvested[1];
+    bool third  = g.harvested[2];
+
+    if (first && second && third) {
+        return true;
+    } else {
+        return false;
+    }
 }
 
-// Reset plots and season state when a new season starts (or on retry)
-void ResetSeason(GameState& gs, Plot plots[NUMBER_OF_PLOTS]) {
-    for (int i = 0; i < NUMBER_OF_PLOTS; i++) {
+void ResetSeason(GameState& game2, Plot plots[4]) {
+    //clear the plots
+    for (int i = 0; i < 4; i++) {
         plots[i].Clear();
     }
-    gs.seasonTimeLeft = SEASON_TIME_SECONDS;
+    //reset the season timer
+    game2.seasonTimeLeft = SEASON_TIME_SECONDS;
 
+    //reset the harvested crops to false (assume none have been harvested yet)
     for (int i = 0; i < 3; i++) {
-        gs.harvested[i] = false;
+        game2.harvested[i] = false;
     }
-
-    gs.selectedPlot = 0;
-    gs.selectedCrop = 0;
-
-    // Points reset each season so unlocks are per-season (as per your spec)
-    gs.totalPoints = 0;
+    game2.selectPlot = 0;
+    game2.selectCrop = 0;
+    game2.totalPoints = 0; // per-season points
 }
 
-// ------------------------------- DRAWING -------------------------------
 
-// Draw one plot (tile). Show different visuals based on state.
-void DrawOnePlot(const GameState& gs, const Plot& p, bool isSelected) {
-    // Base tile
-    DrawRectangleRec(p.rect, Color{240,240,240,255});
 
-    // Border color: green if empty, red if occupied
-    Color border = (p.state == 0) ? GREEN : RED;
-    DrawRectangleLinesEx(p.rect, isSelected ? 4.0f : 2.0f, border);
+void DrawOnePlot(const GameState&, const Plot& pPlot) {
+    int middlex = (int)(pPlot.grid.x + pPlot.grid.width / 2);
+    int middley = (int)(pPlot.grid.y + pPlot.grid.height / 2);
 
-    // Center point for drawing “symbols”
-    int cx = (int)(p.rect.x + p.rect.width / 2);
-    int cy = (int)(p.rect.y + p.rect.height / 2);
+    //If the plot is empty, then color in with brown soil to look like farming plot
+    if (pPlot.state == 0) {
+        // EMPTY: light brown soil
+        DrawRectangleRec(pPlot.grid, Color{210,180,140,255});  // tan brown shade
 
-    if (p.state == 0) {
-        // EMPTY: show a plus with two lines
-        DrawLineEx({p.rect.x + p.rect.width/2, p.rect.y + 20},
-                   {p.rect.x + p.rect.width/2, p.rect.y + p.rect.height - 20}, 3.0f, DARKGREEN);
-        DrawLineEx({p.rect.x + 20, p.rect.y + p.rect.height/2},
-                   {p.rect.x + p.rect.width - 20, p.rect.y + p.rect.height/2}, 3.0f, DARKGREEN);
+        // base border for visibility
+        DrawRectangleLinesEx(pPlot.grid, 2.0f, BLACK);
+        return;
     }
-    else if (p.state == 1) {
-        // GROWING: light green fill + "GROW" label + remaining seconds
-        DrawRectangleRec(p.rect, Color{200, 235, 200, 180});
+    //State 1, meaning the plot is growing, create a green-ish background with keyword GROW and the timer counting to display to
+    // the player the time that remains
+    if (pPlot.state == 1) {
+        // GROWING: light green fill + labels
+        DrawRectangleRec(pPlot.grid, Color{200, 235, 200, 180});
 
-        const int fs = 22;
-        const char* growTxt = "GROW";
-        int tx = (int)(p.rect.x + (p.rect.width - MeasureText(growTxt, fs)) / 2);
-        int ty = (int)(p.rect.y + p.rect.height/2 - fs - 4);
-        DrawText(growTxt, tx, ty, fs, BLACK);
+        //this is the font size number
+        int fs = 22;
 
-        // If you track remaining time in p.timeLeft:
-        int secLeft = (int)(p.timeLeft + 0.5f);
-        std::string t = std::to_string(secLeft) + "s";
-        int tx2 = (int)(p.rect.x + (p.rect.width - MeasureText(t.c_str(), fs)) / 2);
-        DrawText(t.c_str(), tx2, ty + fs + 6, fs, DARKGREEN);
+        //the word in the middle of each plot when the plant is growing
+        char* growTxt = (char*)"GROW";
+
+        int growWidth = MeasureText(growTxt, fs);
+
+        // Finding the x and y positions so that the word grow remains centered within the plots
+        int growT = (int)(pPlot.grid.x + (pPlot.grid.width - MeasureText(growTxt, fs)) / 2);
+        int growY = (int)(pPlot.grid.y + pPlot.grid.height/2 - fs - 4);
+        //ensure that the word grow is written in black
+        DrawText(growTxt, growT, growY, fs, BLACK);
+
+        // the amount of time left until the crop is ready to be harvested
+        int secondsLeft = (int)(pPlot.timeRemaining + 0.5f);
+        //String to display the seconds left
+        std::string t = std::to_string(secondsLeft) + "s";
+        //This is for the timer specifications, in dark green below the word GROW
+        int timerX = (int)(pPlot.grid.x + (pPlot.grid.width - MeasureText(t.c_str(), fs)) / 2);
+        DrawText(t.c_str(), timerX, growY + fs + 6, fs, DARKGREEN);
+
+        // green highlight while growing
+        DrawRectangleLinesEx(pPlot.grid, 3.0f, DARKGREEN);
+        return;
     }
-    else if (p.state == 2) {
-        // READY: draw a gold circle and a checkmark composed of two lines
-        DrawCircle(cx, cy, 18, GOLD);
-        // Checkmark (two lines)
-        Vector2 a = {(float)cx - 10, (float)cy + 2};
-        Vector2 b = {(float)cx - 2,  (float)cy + 10};
-        Vector2 c = {(float)cx + 12, (float)cy - 6};
-        DrawLineEx(a, b, 3.0f, DARKGREEN);
-        DrawLineEx(b, c, 3.0f, DARKGREEN);
 
-        // Also draw text "READY" below
-        const int fs = 20;
-        const char* rtxt = "READY";
-        int tx = (int)(p.rect.x + (p.rect.width - MeasureText(rtxt, fs)) / 2);
-        int ty = (int)(p.rect.y + p.rect.height - fs - 8);
-        DrawText(rtxt, tx, ty, fs, DARKGREEN);
+    //if the plot is READY (state 2), create a white background, red border and checkmark
+    if (pPlot.state == 2) {
+        // fill the plot with a light color to show it is ready
+        DrawRectangleRec(pPlot.grid, Color{240,240,240,255});
+
+        // draw a red outline to highlight it as “ready”
+        DrawRectangleLinesEx(pPlot.grid, 2.0f, RED);
+
+        // draw a gold circle in the middle of the plot
+        int circleRadius = 18;
+        DrawCircle(middlex, middley, 18, GOLD);
+
+        // draw a green check mark (two lines) on top of the gold circle
+        Vector2 lineA = {(float)middlex - 10, (float)middley +  2};
+        Vector2 lineB = {(float)middlex -  2, (float)middley + 10};
+        Vector2 lineC = {(float)middlex + 12, (float)middley -  6};
+        DrawLineEx(lineA, lineB, 3.0f, DARKGREEN);
+        DrawLineEx(lineB, lineC, 3.0f, DARKGREEN);
+
+        // write the word “READY” at the bottom area of the plot once the plot is ready to be harvested
+        int readyFontSize = 20;
+        const char* readyWord = "READY";
+
+        // center the word horizontally at the bottom
+        int readyWidth = MeasureText(readyWord, readyFontSize);
+        int readyTextX = (int)(pPlot.grid.x + (pPlot.grid.width - readyWidth) / 2);
+
+        // place it a bit above the bottom edge of the plot
+        int readyTextY = (int)(pPlot.grid.y + pPlot.grid.height - readyFontSize - 8);
+
+        // draw the word “READY” in dark green
+        DrawText(readyWord, readyTextX, readyTextY, readyFontSize, DARKGREEN);
     }
 }
 
-// Draw the inventory panel on the right with three crop slots.
-// Each locked crop shows a progress bar underneath that no longer overlaps.
-void DrawInventory(GameState& gs, Rectangle panel) {
-    const CropDef* crops = GetSeasonCrops(gs.seasonIndex);
 
-    // Panel background + border
-    DrawRectangleRec(panel, Color{250,250,250,255});
-    DrawRectangleLinesEx(panel, 2.0f, BLACK);
-    DrawText("Inventory", (int)panel.x + 12, (int)panel.y + 10, 24, BLACK);
+void DrawInventory(GameState& game3, Rectangle grid) {
+    CropAttributes* crops = GetSeasonCrops(game3.seasonIndex);
 
-    // Layout constants
-    float slotWidth   = panel.width - 24.0f;
-    float slotHeight  = 64.0f;
-    float barHeight   = 12.0f;
-    float barGap      = 6.0f;    // space between slot and its progress bar
-    float gapBetweenCrops = 30.0f; // extra space after each crop section
+     // draw the inventory grid and colors
+    Color panelFill = Color{250, 250, 250, 255};   // very light gray/white
+    DrawRectangleRec(grid, panelFill);
+    float panelBorderThickness = 2.0f;
+    DrawRectangleLinesEx(grid, panelBorderThickness, BLACK);
 
-    float startX = panel.x + 12.0f;
-    float startY = panel.y + 48.0f;
+    // draw the panel title 
+    int heading1 = (int)grid.x + 12;
+    int heading2 = (int)grid.y + 10;
+    int titleFont = 24;
+    DrawText("Inventory", heading1, heading2, titleFont, BLACK);
+
+    DrawRectangleRec(grid, Color{250,250,250,255});
+    DrawRectangleLinesEx(grid, 2.0f, BLACK);
+    DrawText("Inventory", (int)grid.x + 12, (int)grid.y + 10, 24, BLACK);
+
+    float slotW = grid.width - 24.0f;
+    float slotH = 64.0f;
+    float gaps = 30.0f;
+
+    // where the first row begins
+    float firstRow  = grid.x + 12.0f;
+    float firstRowTop   = grid.y + 48.0f;
+
+    // we will draw 3 rows: i = 0, 1, 2
+    float currentRowTop = firstRowTop;
 
     for (int i = 0; i < 3; i++) {
-        Rectangle slot = { startX, startY, slotWidth, slotHeight };
-        bool unlocked = IsCropUnlocked(gs, i);
+        // build the individuals sections in the inventory
+        Rectangle section;
+        section.width  = slotW;
+        section.x      = firstRow;
+        section.height = slotH;
+        section.y      = currentRowTop;
 
-        // --- Draw the crop slot ---
-        DrawRectangleRec(slot, unlocked ? Color{235,245,235,255} : Color{230,230,230,255});
-        DrawRectangleLinesEx(slot, 2.0f, unlocked ? BLACK : GRAY);
+        // check if crop is locked or unlocked
+        bool isUnlocked = cropUnlocked(game3, i);
 
-        // Text label
-        std::string label = crops[i].name + " (+" + std::to_string(crops[i].yieldPoints) + ")";
-        DrawText(label.c_str(), (int)slot.x + 10, (int)(slot.y + slot.height / 2 - 10),
-                 20, unlocked ? BLACK : GRAY);
-
-        // Handle selection if unlocked
-        if (unlocked) {
-            if (WasClicked(slot)) {
-                gs.selectedCrop = i;
-            }
-            if (gs.selectedCrop == i) {
-                DrawRectangleLinesEx(slot, 4.0f, DARKBLUE);
-            }
-        }
-
-        // --- Progress bar section ---
-        if (!unlocked && crops[i].unlockPoints > 0) {
-            // Bar background + border
-            float barY = slot.y + slot.height + barGap;
-            Rectangle bar = { startX, barY, slotWidth, barHeight };
-            DrawRectangleRec(bar, Color{230,230,230,255});
-            DrawRectangleLinesEx(bar, 2.0f, BLACK);
-
-            // Fill amount
-            float percent = (float)gs.totalPoints / (float)crops[i].unlockPoints;
-            if (percent < 0) percent = 0;
-            if (percent > 1) percent = 1;
-            Rectangle fill = { bar.x, bar.y, bar.width * percent, bar.height };
-            DrawRectangleRec(fill, DARKGREEN);
-
-            // Progress numbers
-            std::string progressText =
-                std::to_string(gs.totalPoints) + " / " + std::to_string(crops[i].unlockPoints);
-            DrawText(progressText.c_str(), (int)bar.x + 4, (int)bar.y - 18, 18, DARKGRAY);
-
-            // Move Y below bar
-            startY = barY + barHeight + gapBetweenCrops;
+        // --- choose fill color depending on locked/unlocked ---
+        Color slotFill;
+        if (isUnlocked) {
+            slotFill = Color{235, 245, 235, 255};  // light green if unlocked
         } else {
-            // If crop unlocked, just move Y below slot
-            startY = slot.y + slot.height + gapBetweenCrops;
+            slotFill = Color{230, 230, 230, 255};  // light gray if locked
+        }
+        DrawRectangleRec(section, slotFill);
+
+        // For the border when locked or unlocked
+        Color slotBorder;
+        if (isUnlocked) {
+            slotBorder = BLACK;
+        } else {
+            slotBorder = GRAY;
+        }
+        DrawRectangleLinesEx(section, 2.0f, slotBorder);
+
+        // Create a label for increase of points i.e (Potato +10)
+        std::string cropName = crops[i].name;
+        int cropPointsValue  = crops[i].totalPoints;
+        std::string rowLabel = cropName + " (+" + std::to_string(cropPointsValue) + ")";
+
+        // Label centering and positioning
+        int labelFont = 20;
+        int labelX = (int)section.x + 10;
+        // center-ish vertically: take row middle then shift up a bit by ~font half
+        int labelY = (int)(section.y + (section.height / 2) - 10);
+
+        // Drawing the label depening on color and positioning
+        if (isUnlocked) {
+            DrawText(rowLabel.c_str(), labelX, labelY, labelFont, BLACK);
+        } else {
+            DrawText(rowLabel.c_str(), labelX, labelY, labelFont, GRAY);
+        }
+
+        // If unlocked, select this crop
+        if (isUnlocked) {
+            bool userClickedThis = isUsed(section);
+            if (userClickedThis) {
+                game3.selectCrop = i;  // remember which crop is selected
+            }
+
+            // if this crop is currently selected, use a thicker highlight
+            if (game3.selectCrop == i) {
+                DrawRectangleLinesEx(section, 4.0f, DARKBLUE);
+            }
+        }
+        // If locked, display the points needed underneath each crop
+        int neededPoints = crops[i].thresholdUnlock;
+        if (!isUnlocked && neededPoints > 0) {
+            int playerPointsNow = game3.totalPoints;
+
+            // build something like "12 / 45 pts", determining and showing the earned and threshold difference
+            std::string progressText = std::to_string(playerPointsNow) + " / " +
+                                       std::to_string(neededPoints) + " pts";
+
+            // put this near the bottom-left inside the slot
+            int progressFont = 18;
+            int progressX = (int)section.x + 10;
+            int progressY = (int)(section.y + section.height - 10);
+            DrawText(progressText.c_str(), progressX, progressY, progressFont, DARKGRAY);
+        }
+
+        // --- move down to the next row to avoid overlap ---
+        float nextRowTop = section.y + section.height + gaps;
+        currentRowTop = nextRowTop;
+    }
+}
+
+
+void HandleMovement(GameState& game4) {
+    int selectedRow = game4.selectPlot / 2; // 0 or 1, where top row = 0, and bottom row = 1
+    int selectedCol = game4.selectPlot % 2; // 0 or 1, 0 = left and 1 = right
+
+    //these conditional statements represent the navigation between the farming plots
+    // that is done.
+    if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) { 
+        if (selectedRow > 0){
+             selectedRow--; 
         }
     }
+    if (IsKeyPressed(KEY_S) || IsKeyPressed(KEY_DOWN)) { 
+        if (selectedRow< 1){
+             selectedRow++; 
+        }
+    }
+    if (IsKeyPressed(KEY_A) || IsKeyPressed(KEY_LEFT)) { 
+        if (selectedCol > 0) {
+            selectedCol--; 
+        }
+    }
+    if (IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT)) { 
+        if (selectedCol < 1) {
+            selectedCol++; 
+        }
+    }
+
+    // convert between row and column
+    game4.selectPlot = selectedRow * 2 + selectedCol;
 }
 
-
-// ------------------------------ LOGIC --------------------------------
-
-// Move the selected plot with W, A, S, D or arrow keys
-void HandleMovement(GameState& gs) {
-    int row = gs.selectedPlot / 2; // 0 or 1
-    int col = gs.selectedPlot % 2; // 0 or 1
-
-    if (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) {
-        if (row > 0) row = row - 1;
+void Planting(GameState& game5, Plot& p) {
+    //get the crops for the current season
+    const CropAttributes* crops = GetSeasonCrops(game5.seasonIndex);
+    //make sure the plot is empty
+    if (p.state != 0) {
+        return;
     }
-    if (IsKeyPressed(KEY_S) || IsKeyPressed(KEY_DOWN)) {
-        if (row < 1) row = row + 1;
+    //crop index is valid and a real crop is selected
+    if (game5.selectCrop < 0 || game5.selectCrop > 2) {
+        return;
     }
-    if (IsKeyPressed(KEY_A) || IsKeyPressed(KEY_LEFT)) {
-        if (col > 0) col = col - 1;
-    }
-    if (IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT)) {
-        if (col < 1) col = col + 1;
+    //determine if the crop is unlocked yet
+    if (!cropUnlocked(game5, game5.selectCrop)) {
+        return;
     }
 
-    gs.selectedPlot = row * 2 + col; // convert back to 0..3
+    // start growing the crop
+    p.state = 1;
+    p.cropIndex = game5.selectCrop;
+    p.timeRemaining  = crops[p.cropIndex].growingTime; // capture growth time at plant
 }
 
-// Try to plant the selected crop on the selected plot
-void TryPlant(GameState& gs, Plot& p) {
-    const CropDef* crops = GetSeasonCrops(gs.seasonIndex);
+void TryHarvest(GameState& game6, Plot& p) {
+    const CropAttributes* crops = GetSeasonCrops(game6.seasonIndex);
 
-    // Can only plant on an empty plot
-    if (p.state != 0) return;
-
-    // Must have a valid selected crop (0..2)
-    if (gs.selectedCrop < 0 || gs.selectedCrop > 2) return;
-
-    // Crop must be unlocked
-    if (!IsCropUnlocked(gs, gs.selectedCrop)) return;
-
-    // Start growing
-    p.state     = 1;
-    p.cropIndex = gs.selectedCrop;
-    p.timeLeft  = crops[p.cropIndex].growSeconds;
-}
-
-// Try to harvest the selected plot
-void TryHarvest(GameState& gs, Plot& p) {
-    const CropDef* crops = GetSeasonCrops(gs.seasonIndex);
-
-    // Can only harvest if it is ready
-    if (p.state != 2) return;
-    if (p.cropIndex < 0 || p.cropIndex > 2) return;
-
-    // Add points
-    gs.totalPoints += crops[p.cropIndex].yieldPoints;
-
-    // Mark this crop as harvested for the season
-    gs.harvested[p.cropIndex] = true;
-
-    // Clear the plot
+    //ensure the plot contains a fully grown crop
+    if (p.state != 2) {
+        return;
+    }
+    //ensure crop index is valid
+    if (p.cropIndex < 0 || p.cropIndex > 2){ 
+        return;
+    }
+    //add crop points to a total score
+    game6.totalPoints += crops[p.cropIndex].totalPoints;
+    game6.harvested[p.cropIndex] = true;
+    // clear plot so that new crop could be planted
     p.Clear();
 }
 
-// Update grow timer for one plot
-void UpdateGrowth(Plot& p, float dt) {
-    if (p.state == 1) { // only while growing
-        p.timeLeft = p.timeLeft - dt;
-        if (p.timeLeft <= 0.0f) {
-            p.timeLeft = 0.0f;
+void UpdateGrowth(Plot& p, float timeFrame) {
+    // only update the growth if the crop is in a growing stage
+    if (p.state == 1) {
+        // decrement the time
+        p.timeRemaining -= timeFrame;
+        // once the timer hits zero or less, the crop is ready to be collected and points can be added
+        if (p.timeRemaining <= 0.0f) {
+            p.timeRemaining = 0.0f;
             p.state = 2; // ready
         }
     }
 }
-
-// ------------------------------ ENTRY --------------------------------
-
-// This function owns its own window. The menu should close its window
-// before calling this, and recreate the menu window after this returns.
+// This is the code for the farming plots
 void RunFarmingGrid() {
-    // Create the farming screen window
     InitWindow(FARM_SCREEN_WIDTH, FARM_SCREEN_HEIGHT, "Farming Grid");
-    SetTargetFPS(TARGET_FPS);
-    SetExitKey(KEY_NULL); // pressing ESC will NOT kill the whole app
+    SetTargetFPS(TARGET);
+    SetExitKey(KEY_NULL); // pressing ESC will NOT kill the whole app, only the current window
 
-    // Layout areas for drawing
-    Rectangle gridArea = { 60, 120, 520, 420 };  // left side, 2x2 plots
-    Rectangle invArea  = { 620, 120, 320, 380 }; // right side, inventory
+    // gridArea is where the 2x2 farm plots are located
+    Rectangle gridA;
+    gridA.x = 60;     // a bit from the left edge
+    gridA.y = 120;    // a bit from the top
+    gridA.width  = 520;
+    gridA.height = 420;
 
-    // Build the 4 plot rectangles (2 by 2 with a gap)
-    Plot plots[NUMBER_OF_PLOTS];
+    // inventory area dimensions on the right side that contains the crops
+    Rectangle inventoryA;
+    inventoryA.x = 620;     // placed to the right of the grid
+    inventoryA.y = 120;     // align with grid vertically
+    inventoryA.width  = 320;
+    inventoryA.height = 380;
 
-    float cellWidth  = gridArea.width  / 2.0f - 20.0f;
-    float cellHeight = gridArea.height / 2.0f - 20.0f;
+    Plot plots[4]; // creates 4 farming plots
 
-    plots[0].rect = { gridArea.x,                 gridArea.y,                 cellWidth, cellHeight };
-    plots[1].rect = { gridArea.x + cellWidth + 20.0f, gridArea.y,                 cellWidth, cellHeight };
-    plots[2].rect = { gridArea.x,                 gridArea.y + cellHeight + 20.0f, cellWidth, cellHeight };
-    plots[3].rect = { gridArea.x + cellWidth + 20.0f, gridArea.y + cellHeight + 20.0f, cellWidth, cellHeight };
+     // how much space between the cells
+    float gapCell = 20.0f;
 
-    // Make sure plots start empty
-    for (int i = 0; i < NUMBER_OF_PLOTS; i++) {
-        plots[i].Clear();
+    // each cell takes up half the grid width and height, minus a small gap
+    float cellW  = (gridA.width  / 2.0f) - gapCell;
+    float cellH = (gridA.height / 2.0f) - gapCell;
+
+    // start placing the plots using nested loops
+    int starting = 0;
+
+    for (int row = 0; row < 2; row++) {      // two rows: 0 = top, 1 = bottom
+        for (int col = 0; col < 2; col++) {  // two columns: 0 = left, 1 = right
+
+            // work out where this plot should go
+            float xPos = gridA.x + col * (cellW + gapCell);
+            float yPos = gridA.y + row * (cellH + gapCell);
+
+            // assign these values to the current plot to position it
+            plots[starting].grid.x = xPos;
+            plots[starting].grid.y = yPos;
+            plots[starting].grid.width  = cellW;
+            plots[starting].grid.height = cellH;
+
+            // clear the plot so it starts empty
+            plots[starting].Clear();
+
+            // go to the next plot in the array
+            starting += 1; // FIXED (was =+ 1)
+        }
     }
 
-    // Set up the game state
-    GameState gs;
-    gs.seasonIndex = 0;                       // start at Spring
-    gs.seasonTimeLeft = SEASON_TIME_SECONDS;  // season countdown
-    gs.totalPoints = 0;                       // points this season
-    gs.selectedPlot = 0;                      // start selecting top-left plot
-    gs.selectedCrop = 0;                      // start with the first crop
-    gs.allSeasonsCompleted = false;           // not yet
+    // --- now set up the game state variables ---
+    GameState game7;
 
-    for (int i = 0; i < 3; i++) {
-        gs.harvested[i] = false;
-    }
+    // start from the first season (Spring)
+    game7.seasonIndex = 0;
 
-    // Main loop for the farming screen
+    // set the timer for the season (e.g., 60 seconds)
+    game7.seasonTimeLeft = SEASON_TIME_SECONDS;
+
+    // start the user with zero points
+    game7.totalPoints = 0;
+
+    // start on the first plot and first crop
+    game7.selectPlot = 0;
+    game7.selectCrop = 0;
+
+    // we haven’t finished all seasons yet
+    game7.allSeasonsCompleted = false;
+
+    // make sure all crops start unharvested
+    game7.harvested[0] = false;
+    game7.harvested[1] = false;
+    game7.harvested[2] = false;
+
+
     while (!WindowShouldClose()) {
+        //Planting Section
+        float remaining = GetFrameTime();
 
-        // ----------------- UPDATE -----------------
-        float dt = GetFrameTime();
-
-        // Allow ESC to return to the menu (close this window)
+        bool pressedEscape = IsKeyPressed(KEY_ESCAPE);
         if (IsKeyPressed(KEY_ESCAPE)) {
-            break;
+            break; // return to menu
         }
 
-        // If the game is not fully completed, the season timer counts down
-        if (!gs.allSeasonsCompleted) {
-            gs.seasonTimeLeft = gs.seasonTimeLeft - dt;
-            if (gs.seasonTimeLeft < 0.0f) {
-                gs.seasonTimeLeft = 0.0f;
-            }
+        // Tick season timer, decrease the seasons time and it cannot fall under 0
+        game7.seasonTimeLeft -= remaining;
+        if (game7.seasonTimeLeft < 0){
+            game7.seasonTimeLeft = 0;
+        } 
+
+        // Movement + actions
+        HandleMovement(game7); // --> lets the user to move amongst the plots using WASD keys
+
+        //plant on the desired plot once the SPACE key is pressed
+        bool spaceBar = IsKeyPressed(KEY_SPACE);
+        if (spaceBar) {
+            int desiredPlot = game7.selectPlot;
+            Planting(game7, plots[game7.selectPlot]);
+        }
+        //Harvest the plant from the desired plot
+        bool H = IsKeyPressed(KEY_H);
+        if (H) {
+            int desiredHarvest = game7.selectPlot;
+            TryHarvest(game7, plots[game7.selectPlot]);
         }
 
-        // Move selected plot
-        HandleMovement(gs);
-
-        // Plant with SPACE (on selected plot)
-        if (IsKeyPressed(KEY_SPACE)) {
-            TryPlant(gs, plots[gs.selectedPlot]);
+        //Update all plots so growing crops continue to countdown towards ready
+        for (int i = 0; i < 4; i++) {
+            UpdateGrowth(plots[i], remaining);
         }
 
-        // Harvest with H (on selected plot)
-        if (IsKeyPressed(KEY_H)) {
-            TryHarvest(gs, plots[gs.selectedPlot]);
-        }
+        // advance season if finished early, before the time ends
+    
+        bool collectedAll = (game7.harvested[0] && game7.harvested[1] && game7.harvested[2]);
 
-        // Grow plants
-        for (int i = 0; i < NUMBER_OF_PLOTS; i++) {
-            UpdateGrowth(plots[i], dt);
-        }
-
-        // If all 3 crops were harvested BEFORE time runs out, go to next season
-        if (!gs.allSeasonsCompleted && HarvestedAllThree(gs) && gs.seasonTimeLeft > 0.0f) {
-            if (gs.seasonIndex < WINTER) {
-                // Next season
-                gs.seasonIndex = gs.seasonIndex + 1;
-                ResetSeason(gs, plots);
+        // if we finished early (before timer ends) go to next season
+        if (game7.allSeasonsCompleted == false && collectedAll == true && game7.seasonTimeLeft > 0.0f) {
+        if (game7.seasonIndex < 3) {
+            game7.seasonIndex = game7.seasonIndex + 1;  // move to next season
+            ResetSeason(game7, plots); 
             } else {
-                // We finished Winter too — all seasons done
-                gs.allSeasonsCompleted = true;
+                //If we were already at winter, thus the game is done and all seasons are completed
+                game7.allSeasonsCompleted = true;
             }
         }
 
-        // If time is up and we did NOT finish all 3 crops, allow retry with ENTER
-        if (!gs.allSeasonsCompleted && gs.seasonTimeLeft <= 0.0f && !HarvestedAllThree(gs)) {
-            if (IsKeyPressed(KEY_ENTER)) {
-                ResetSeason(gs, plots);
-            }
+        // allow retry if time expired without finishing
+        if (!game7.allSeasonsCompleted && game7.seasonTimeLeft <= 0.0f && !HarvestedAllThree(game7)) {
+            if (IsKeyPressed(KEY_ENTER)) ResetSeason(game7, plots);
         }
 
-        // ------------------ DRAW ------------------
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
-        // Title: show season name OR "All Seasons Completed!"
-        if (!gs.allSeasonsCompleted) {
-            std::string title = "Season: " + std::string(SEASON_NAMES[gs.seasonIndex]);
-            DrawText(title.c_str(), 24, 20, 36, BLACK);
+        // Season heading (coloured) drawn once
+        if (!game7.allSeasonsCompleted) {
+            const char* seasonHeading = SEASONS[game7.seasonIndex];
+            //retrieve the respective color for each seasons heading
+            Color seasonCol = GetSeasonColor(game7.seasonIndex);
+            
+            int headX = 24;
+            int headY = 20;
+            int titleFontSize = 36;
+        
+            DrawText(seasonHeading, 24, 20, 36, seasonCol);
+            
         } else {
-            std::string title = "All Seasons Completed!";
-            DrawText(title.c_str(), 24, 20, 36, BLACK);
+            //If all the seasons are done, output a congrats message saying all seasons are completed
+            DrawText("All Seasons Completed!", 24, 20, 36, BLACK);
         }
 
         // Season timer (top-right)
         int screenW = GetScreenWidth();
-        int secondsLeft = (int)(gs.seasonTimeLeft + 0.5f);
+        int tf = 28;
+        //Round timer to nearest second
+        int secondsLeft = (int)(game7.seasonTimeLeft + 0.5f);
         std::string timeText = "Time: " + std::to_string(secondsLeft) + "s";
-        int timeTextX = screenW - MeasureText(timeText.c_str(), 28) - 24;
-        DrawText(timeText.c_str(), timeTextX, 24, 28, BLACK);
 
-        // Help text
+        int timeW = MeasureText(timeText.c_str(), tf);
+        int timeX = screenW - timeW - 24;
+        int timeY = 24;
+
+        DrawText(timeText.c_str(), timeX, timeY, tf, BLACK);
+
+        // Help text at the top of the grid
         DrawText("W/A/S/D move  |  Click crop to select  |  SPACE plant  |  H harvest  |  ENTER retry  |  ESC menu",
                  60, 80, 18, DARKGRAY);
 
-        // Draw the grid outline and the 4 plots
-        DrawRectangleLinesEx(gridArea, 2.0f, BLACK);
-        for (int i = 0; i < NUMBER_OF_PLOTS; i++) {
-            bool selected = (i == gs.selectedPlot);
-            DrawOnePlot(gs, plots[i], selected);
+        // Grid & plots with the border
+        DrawRectangleLinesEx(gridA, 2.0f, BLACK);
+        for (int i = 0; i < 4; i++) {
+            bool selected = (i == game7.selectPlot);
+            DrawOnePlot(game7, plots[i]);
+
+            // Always draw a base border so all four plots have clear edges
+            DrawRectangleLinesEx(plots[i].grid, 2.0f, BLACK);
+
+            // If this plot is selected with WASD, show a dark-blue highlight (on top)
+            if (selected) {
+                DrawRectangleLinesEx(plots[i].grid, 4.0f, DARKBLUE);
+            }
         }
 
-        // Draw the inventory panel (3 crops + points bar)
-        DrawInventory(gs, invArea);
+        // Inventory panel
+        DrawInventory(game7, inventoryA);
 
-        // Show the unlock thresholds (for clarity)
-        const CropDef* crops = GetSeasonCrops(gs.seasonIndex);
-        int y = (int)(invArea.y + invArea.height + 10);
-        DrawText("Unlocks:", (int)invArea.x + 12, y, 18, BLACK);
-        y = y + 24;
+        // Unlock thresholds for each crop in the inventory sections
+        const CropAttributes* crops = GetSeasonCrops(game7.seasonIndex);
+        int y = (int)(inventoryA.y + inventoryA.height + 10);
+
+        DrawText("Unlocks:", (int)inventoryA.x + 12, y, 18, BLACK);
+        y += 24;
         for (int i = 0; i < 3; i++) {
-            std::string row = crops[i].name + ": " + std::to_string(crops[i].unlockPoints) + " pts";
-            DrawText(row.c_str(), (int)invArea.x + 12, y, 18, DARKGRAY);
-            y = y + 20;
+            std::string row = crops[i].name + ": " + std::to_string(crops[i].thresholdUnlock) + " pts";
+            DrawText(row.c_str(), (int)inventoryA.x + 12, y, 18, DARKGRAY);
+            y += 20;
         }
 
-        // Simple overlays for “retry” and “completed”
-        if (!gs.allSeasonsCompleted && gs.seasonTimeLeft <= 0.0f && !HarvestedAllThree(gs)) {
-            std::string big = "Time's up!";
-            std::string small = "Press ENTER to retry this season, or ESC to return to the menu.";
-            int sw = GetScreenWidth();
-            int sh = GetScreenHeight();
-            DrawRectangle(0, sh/2 - 80, sw, 140, Color{255,255,255,230});
-            DrawRectangleLines(10, sh/2 - 80, sw-20, 140, BLACK);
-            DrawText(big.c_str(),   CenterX(big,   36, sw), sh/2 - 40, 36, BLACK);
-            DrawText(small.c_str(), CenterX(small, 22, sw), sh/2 +  2, 22, DARKGRAY);
-        }
+        // Overlays, first for when the timer has ended and not all the crops have been unlocked, planted or harvested
+        if (game7.allSeasonsCompleted == false && game7.seasonTimeLeft <= 0.0f && collectedAll == false) {
+        std::string bigMessage   = "Time's up!";
+        std::string smallMessage = "Press ENTER to retry this season, or ESC to return to the menu.";
 
-        if (gs.allSeasonsCompleted) {
+        int sW = GetScreenWidth();
+        int sH = GetScreenHeight();
+
+        int boxTop = (sH / 2) - 80;
+        int boxHeight = 140;
+
+        // background box
+        Color overlayColor = Color{255, 255, 255, 230}; // white with a bit of transparency
+        DrawRectangle(0, boxTop, sW, boxHeight, overlayColor); // width = sW
+
+        // border around the boxes of the inventory
+        int boxLeft = 10;
+        int boxWidth = sW - 20;
+        DrawRectangleLines(boxLeft, boxTop, boxWidth, boxHeight, BLACK);
+
+        // center the big text
+        int bigFont = 36;
+        int bigWidth = MeasureText(bigMessage.c_str(), bigFont);
+        int bigX = (sW - bigWidth) / 2;
+        int bigY = (sH / 2) - 40;
+        DrawText(bigMessage.c_str(), bigX, bigY, bigFont, BLACK);
+
+        // center the smaller text when it comes to the messages
+        int smallFont = 22;
+        int smallWidth = MeasureText(smallMessage.c_str(), smallFont);
+        int smallX = (sW - smallWidth) / 2;
+        int smallY = (sH / 2) + 2;
+        DrawText(smallMessage.c_str(), smallX, smallY, smallFont, DARKGRAY);
+    }
+
+        //For when the game is completed, the final message that appears for the user on the screen
+        if (game7.allSeasonsCompleted == true) {
             std::string big = "Congrats! All seasons completed.";
             std::string small = "Press ESC to return to menu, or ENTER to replay Spring.";
-            int sw = GetScreenWidth();
-            int sh = GetScreenHeight();
-            DrawRectangle(0, sh/2 - 80, sw, 140, Color{255,255,255,230});
-            DrawRectangleLines(10, sh/2 - 80, sw-20, 140, BLACK);
-            DrawText(big.c_str(),   CenterX(big,   32, sw), sh/2 - 40, 32, BLACK);
-            DrawText(small.c_str(), CenterX(small, 20, sw), sh/2 +   2, 20, DARKGRAY);
 
-            // Allow ENTER to replay Spring right away
+            int sW = GetScreenWidth();
+            int sH = GetScreenHeight();
+
+            int boxTop = (sH / 2) - 80;
+            int boxHeight = 140;
+
+            // white background area with a border
+            Color overlayColor = Color{255, 255, 255, 230};
+            DrawRectangle(0, boxTop, sW, boxHeight, overlayColor);
+            DrawRectangleLines(10, boxTop, sW - 20, boxHeight, BLACK);
+
+            // center the big text and the message
+            int bigFont = 32;
+            int bigWidth = MeasureText(big.c_str(), bigFont);
+            int bigX = (sW - bigWidth) / 2;
+            int bigY = (sH / 2) - 40;
+            DrawText(big.c_str(), bigX, bigY, bigFont, BLACK);
+
+            // center the small text with the message
+            int smallFont = 20;
+            int smallWidth = MeasureText(small.c_str(), smallFont);
+            int smallX = (sW - smallWidth) / 2;
+            int smallY = (sH / 2) + 2;
+            DrawText(small.c_str(), smallX, smallY, smallFont, DARKGRAY);
+
+            
+            //If enter is pressed and all the seasons are completed everything resets
             if (IsKeyPressed(KEY_ENTER)) {
-                gs.allSeasonsCompleted = false;
-                gs.seasonIndex = SPRING;
-                ResetSeason(gs, plots);
+                game7.allSeasonsCompleted = false;
+                game7.seasonIndex = 0;
+                ResetSeason(game7, plots);
             }
         }
 
         EndDrawing();
     }
 
-    // Close ONLY the farming window. The menu will recreate its own window.
     CloseWindow();
 }
+
+
+
+
 

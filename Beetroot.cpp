@@ -3,7 +3,9 @@
 
 #include "Seed.h"
 
-Beetroot::Beetroot() : Seed("Beetroot", 11, 28) {}
+Beetroot::Beetroot() : Seed("Beetroot", 11, 28) {
+    pointsUnlockThreshold = 60;
+}
 
 void Beetroot::grow() {
   std::cout << name << " is growing for " << growTime << " seconds.\n";

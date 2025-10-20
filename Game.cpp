@@ -17,7 +17,7 @@ Game::Game()
       timeLimit(60),
       isGameOver(false),
       currentSeason(nullptr),
-      currentSeedStartTime(0.0f) {}
+  currentSeedStartTime(0.0), seasonStartScore(0) {}
 
 Game::~Game() {
   if (currentSeason) {
@@ -27,20 +27,19 @@ Game::~Game() {
 }
 
 // Helper to get current system time in seconds
-float Game::getCurrentTime() const {
+double Game::getCurrentTime() const {
   using namespace std::chrono;
   auto now = high_resolution_clock::now();
   auto ms = duration_cast<milliseconds>(now.time_since_epoch()).count();
-  return ms / 1000.0f;
+  return ms / 1000.0;
 }
 
 void Game::startGame() {
-  // start with Spring
-  currentSeason = new Season("Spring", timeLimit);
-  currentSeedIndex = 0;
-  currentSeed = currentSeason->getSeeds()[currentSeedIndex];
+  // Start the game at level 1 and delegate to startLevel() so the
+  // concrete season constructors run and set season-specific data.
+  currentLevel = 1;
   isGameOver = false;
-  std::cout << "\n🌸 Starting Spring season!\n";
+  startLevel();
 }
 
 // Start the current level
@@ -50,47 +49,72 @@ void Game::startLevel() {
     currentSeason = nullptr;
   }
 
-  string seasonName;
+  std::string seasonName;
   switch (currentLevel) {
-    case 1:
-      seasonName = "Spring";
-      break;
-    case 2:
-      seasonName = "Summer";
-      break;
-    case 3:
-      seasonName = "Autumn";
-      break;
-    case 4:
-      seasonName = "Winter";
-      break;
-    default:
-      endGame();
-      return;
+    case 1: seasonName = "Spring"; break;
+    case 2: seasonName = "Summer"; break;
+    case 3: seasonName = "Autumn"; break;
+    case 4: seasonName = "Winter"; break;
+    default: endGame(); return;
   }
 
-  currentSeason = new Season(seasonName, timeLimit);
+  // instantiate concrete season subclass so its constructor sets
+  // requiredPoints and any season-specific config
+  if (seasonName == "Spring")
+    currentSeason = new Spring();
+  else if (seasonName == "Summer")
+    currentSeason = new Summer();
+  else if (seasonName == "Autumn")
+    currentSeason = new Autumn();
+  else if (seasonName == "Winter")
+    currentSeason = new Winter();
+  else
+    currentSeason = new Season(seasonName, timeLimit);
+
   currentSeason->start_Season();
-  startTime = getCurrentTime();
+  startTime = std::chrono::steady_clock::now();
+  seasonStartScore = player.getPoints();
+
+  // initialize seed index and current seed pointer
+  currentSeedIndex = 0;
+  if (!currentSeason->getSeeds().empty())
+    currentSeed = currentSeason->getSeeds()[currentSeedIndex];
+
   cout << "Level " << currentLevel << ": " << seasonName
        << " season started!\n";
+  if (currentSeason) {
+    cout << "Required points for this season: "
+         << currentSeason->getRequiredPoints() << "\n";
+  }
 }
-
 // Handle timeout
 void Game::handleTimeOut() {
-  cout << "⏰ Time’s up! Restarting level.\n";
-  player.deductPoints(10);
-  startLevel();
+  cout << "⏰ Time’s up!\n";
+  int seasonPoints = player.getPoints() - seasonStartScore;
+  int required = 0;
+  if (currentSeason) required = currentSeason->getRequiredPoints();
+  cout << "Points this season: " << seasonPoints << " (required: "
+       << required << ")\n";
+  if (seasonPoints >= required) {
+    cout << "You reached the required points for this season! Advancing...\n";
+    // advance to next level
+    nextLevel();
+  } else {
+    cout << "You did NOT reach the required points. Restarting level...\n";
+    startLevel();
+  }
 }
 
 // Check if season time expired
 bool Game::isTimeUp() const {
   if (!currentSeason) return false;
-  float elapsed = getCurrentTime() - startTime;
+  using namespace std::chrono;
+  auto now = steady_clock::now();
+  auto elapsed = duration_cast<seconds>(now - startTime).count();
   return elapsed >= currentSeason->getTimeLimit();
 }
 
-// Check if player progressed
+// Public wrapper used by main loop
 bool Game::checkProgress() {
   if (!currentSeason) return false;
   return currentSeason->allSeedsCompleted();
@@ -102,8 +126,8 @@ void Game::endGame() {
   cout << "🌾 Game Over! Final score: " << player.getPoints() << "\n";
 }
 
-bool Game::isSeedTimeUp(float seedGrowTime) const {
-  float elapsed = getCurrentTime() - currentSeedStartTime;
+bool Game::isSeedTimeUp(double seedGrowTime) const {
+  double elapsed = getCurrentTime() - currentSeedStartTime;
   return elapsed >= seedGrowTime;
 }
 
@@ -180,28 +204,13 @@ void Game::advanceSeed() {
 }
 
 void Game::nextLevel() {
-  // Move to next season
-  if (currentSeason->get_Name() == "Spring") {
-    delete currentSeason;
-    currentSeason = new Season("Summer", timeLimit);
-    currentSeedIndex = 0;
-    currentSeed = currentSeason->getSeeds()[currentSeedIndex];
-    std::cout << "\n Summer has begun!\n";
-  } else if (currentSeason->get_Name() == "Summer") {
-    delete currentSeason;
-    currentSeason = new Season("Autumn", timeLimit);
-    currentSeedIndex = 0;
-    currentSeed = currentSeason->getSeeds()[currentSeedIndex];
-    std::cout << "\n Autumn has begun!\n";
-  } else if (currentSeason->get_Name() == "Autumn") {
-    delete currentSeason;
-    currentSeason = new Season("Winter", timeLimit);
-    currentSeedIndex = 0;
-    currentSeed = currentSeason->getSeeds()[currentSeedIndex];
-    std::cout << "\n  Winter has begun!\n";
-  } else {
-    // All seasons completed — end game
+  // Advance the level and reuse startLevel() to ensure consistent
+  // construction and initialization for the new season.
+  currentLevel++;
+  if (currentLevel > 4) {
     std::cout << "\n All seasons completed! Game Over.\n";
     endGame();
+    return;
   }
+  startLevel();
 }

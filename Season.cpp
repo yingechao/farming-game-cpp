@@ -18,7 +18,7 @@ using namespace std;
 
 // Constructor
 Season::Season(std::string seasonName, int limit)
-    : name(seasonName), timeLimit(limit), currentSeedIndex(0) {
+    : name(seasonName), timeLimit(limit), currentSeedIndex(0), requiredPoints(0) {
   loadSeeds();
 }
 
@@ -29,6 +29,10 @@ Season::~Season() {
 }
 
 std::vector<Seed*>& Season::getSeeds() { return seeds; }
+
+std::vector<std::string> Season::getSeedList() { return seedTypes; }
+
+int Season::getRequiredPoints() { return requiredPoints; }
 
 // Load seeds based on season
 void Season::loadSeeds() {

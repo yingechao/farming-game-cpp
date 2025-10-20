@@ -7,6 +7,7 @@
 #include "Strawberry.h"
 
 class Spring : public Season {
+  protected: 
  public:
   Spring();
 };
