@@ -4,6 +4,7 @@
 class Planted : public CropState{
 
     public:
+    Planted(); // Constructor
     void updateGrowth(int);
     int getStatus();
 

@@ -12,12 +12,8 @@ void Carrot::grow() {
 }
 
 int Carrot::harvest() {
-  if (!isHarvested) {
-    isHarvested = true;
-    std::cout << name << " harvested! +" << value << " points.\n";
-    return value;
-  }
-  return 0;
+  std::cout << name << " harvested! +" << value << " points.\n";
+  return value;
 }
 
 void Carrot::reset() { isHarvested = false; }

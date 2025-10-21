@@ -3,6 +3,31 @@
 #include <string>
 #include <cstdio> // for snprintf
 
+// OOP includes
+#include "Seed.h"
+#include "Player.h"
+#include "Season.h"
+#include "Spring.h"
+#include "Summer.h"
+#include "Autumn.h"
+#include "Winter.h"
+#include "CropState.h"
+#include "Planted.h"
+#include "Harvestable.h"
+#include "Harvested.h"
+#include "Potato.h"
+#include "Strawberry.h"
+#include "Cauliflower.h"
+#include "Tomato.h"
+#include "Wheat.h"
+#include "Eggplant.h"
+#include "Carrot.h"
+#include "Lettuce.h"
+#include "Peas.h"
+#include "Kale.h"
+#include "Beetroot.h"
+#include "Onion.h"
+
 //Defines crop behaviour in its respective seasons
 struct CropAttributes {
     std::string name;      // inventory name
@@ -13,26 +38,56 @@ struct CropAttributes {
 };
 
 struct Plot {
-    Rectangle grid;   // draw rect
-    int   state;      // 0 empty, 1 growing, 2 ready
-    int   cropIndex;  // 0..2 or -1 none
-    float timeRemaining;   // countdown until the crop is ready to be harvested
+    Rectangle grid;           // draw rect (keep for GUI)
+    Seed* plantedSeed;        // OOP: pointer to planted seed
+    CropState* currentState;  // OOP: current crop state
+    float timeRemaining;      // countdown until the crop is ready to be harvested
 
     void Clear() { 
-        state = 0; 
-        cropIndex = -1; 
+        plantedSeed = nullptr; 
+        currentState = nullptr; 
         timeRemaining = 0.0f; 
+    }
+    
+    // Helper methods for GUI compatibility
+    int getState() const {
+        if (!plantedSeed) return 0;  // empty
+        if (!currentState) return 0; // empty
+        if (currentState->isDoneGrowing()) return 2; // ready
+        return 1; // growing
+    }
+    
+    int getCropIndex() const {
+        if (!plantedSeed) return -1;
+        // This will be determined by the season's seed order
+        return -1; // Will be set by season logic
     }
 };
 
 struct GameState {
-    int   seasonIndex;         // 0 = Spring, 1 = Sumer, 2 = Autumn, 3 = Winter
+    // OOP Integration
+    Player* player;            // OOP: Player class for points and progress
+    Season* currentSeason;     // OOP: Current season with seeds
+    int   seasonIndex;         // 0 = Spring, 1 = Summer, 2 = Autumn, 3 = Winter (keep for GUI)
     float seasonTimeLeft;      // season timer (seconds)
-    int   totalPoints;         // points collected this season
-    bool  harvested[3];        // which crops harvested
+    bool  harvested[3];        // which crops harvested (keep for GUI compatibility)
     int   selectPlot;          // 0..3
     int   selectCrop;          // 0..2
     bool  allSeasonsCompleted; // after Winter is completed and all goals met
+    int   totalPoints;         // GUI points display (synchronized with Player)
+    
+    // Constructor
+    GameState() : player(nullptr), currentSeason(nullptr), seasonIndex(0), 
+                  seasonTimeLeft(60.0f), selectPlot(0), selectCrop(0), 
+                  allSeasonsCompleted(false), totalPoints(0) {
+        for (int i = 0; i < 3; i++) harvested[i] = false;
+    }
+    
+    // Destructor
+    ~GameState() {
+        delete player;
+        delete currentSeason;
+    }
 };
 
 int FARM_SCREEN_WIDTH  = 1000;
@@ -49,40 +104,42 @@ const char* SEASONS[4] = {
     "Winter" 
 };
 
-//Crops that are available in each season, their point threshold, value and time limit they 
-//take to grow along with their coloring
-static CropAttributes SPRING_CROPS[3] = {
-    { "Potato",      0, 10,  5.0f, Color{180,220,180,255} },
-    { "Strawberry", 45, 13,  7.0f, Color{120,200,140,255} },
-    { "Cauliflower",90, 16, 10.0f, Color{240,120,140,255} }
-};
-static CropAttributes SUMMER_CROPS[3] = {
-    { "Tomato",    0, 15,  9.0f, Color{220,120,120,255} },
-    { "Wheat",    60, 18, 11.0f, Color{230,200,110,255} },
-    { "Eggplant", 120, 21, 13.0f, Color{160,220,160,255} }
-};
-static CropAttributes AUTUMN_CROPS[3] = {
-    { "Carrot",    0, 22,  11.0f, Color{255,180,100,255} },
-    { "Lettuce",  50, 25,  13.0f, Color{180, 60, 80,255} },
-    { "Peas",     70, 28,  15.0f, Color{230,170, 90,255} }
-};
-static CropAttributes WINTER_CROPS[3] = {
-    { "Kale",      0, 26, 10.0f, Color{120,180,140,255} },
-    { "Beetroot", 25, 29, 13.0f, Color{170,220,170,255} },
-    { "Onion",   100, 32, 16.0f, Color{160,200,160,255} }
-};
-
-//This function returns the list of crops for the current seasons
-CropAttributes* GetSeasonCrops(int seasonIndex) {
-    if (seasonIndex == 0){
-        return SPRING_CROPS;
-    } else if (seasonIndex == 1){
-        return SUMMER_CROPS;
-    } else if (seasonIndex == 2){
-        return AUTUMN_CROPS;
-    } else {
-        return WINTER_CROPS;
+// Helper function to get crop attributes from OOP Season
+std::vector<CropAttributes> GetSeasonCrops(GameState& game) {
+    std::vector<CropAttributes> crops;
+    
+    if (!game.currentSeason) {
+        return crops;
     }
+    
+    std::vector<Seed*>& seeds = game.currentSeason->getSeeds();
+    for (int i = 0; i < 3 && i < (int)seeds.size(); i++) {
+        Seed* seed = seeds[i];
+        CropAttributes attr;
+        attr.name = seed->get_Name();
+        attr.thresholdUnlock = seed->getPointsUnlockThreshold();
+        attr.totalPoints = seed->get_Value();
+        attr.growingTime = seed->get_GrowTime();
+        
+        // Set colors based on crop type (keeping original GUI colors)
+        if (attr.name == "Potato") attr.color = Color{180,220,180,255};
+        else if (attr.name == "Strawberry") attr.color = Color{120,200,140,255};
+        else if (attr.name == "Cauliflower") attr.color = Color{240,120,140,255};
+        else if (attr.name == "Tomato") attr.color = Color{220,120,120,255};
+        else if (attr.name == "Wheat") attr.color = Color{230,200,110,255};
+        else if (attr.name == "Eggplant") attr.color = Color{160,220,160,255};
+        else if (attr.name == "Carrot") attr.color = Color{255,180,100,255};
+        else if (attr.name == "Lettuce") attr.color = Color{180, 60, 80,255};
+        else if (attr.name == "Peas") attr.color = Color{230,170, 90,255};
+        else if (attr.name == "Kale") attr.color = Color{120,180,140,255};
+        else if (attr.name == "Beetroot") attr.color = Color{170,220,170,255};
+        else if (attr.name == "Onion") attr.color = Color{160,200,160,255};
+        else attr.color = Color{200,200,200,255}; // default
+        
+        crops.push_back(attr);
+    }
+    
+    return crops;
 }
 
 //Color for the headers
@@ -161,8 +218,17 @@ bool cropUnlocked(GameState& game, int cropIndex) {
         return false; // out of bounds, just a sanity check
     }
 
-    CropAttributes* crops = GetSeasonCrops(game.seasonIndex);
-    int pointsNeeded = crops[cropIndex].thresholdUnlock;
+    if (!game.currentSeason) {
+        return false;
+    }
+
+    std::vector<Seed*>& seeds = game.currentSeason->getSeeds();
+    if (cropIndex >= (int)seeds.size()) {
+        return false;
+    }
+
+    Seed* seed = seeds[cropIndex];
+    int pointsNeeded = seed->getPointsUnlockThreshold();
     int playerPts = game.totalPoints;
 
     //To determine if the crop has been unlocked
@@ -200,6 +266,13 @@ void ResetSeason(GameState& game2, Plot plots[4]) {
     }
     game2.selectPlot = 0;
     game2.selectCrop = 0;
+    
+    // Reset player points for new season
+    if (game2.player) {
+        std::cout << "DEBUG: Resetting season - points before: " << game2.player->getPoints() << std::endl;
+        game2.player->resetProgress();
+        std::cout << "DEBUG: Resetting season - points after: " << game2.player->getPoints() << std::endl;
+    }
     game2.totalPoints = 0; // per-season points
 }
 
@@ -210,7 +283,7 @@ void DrawOnePlot(const GameState&, const Plot& pPlot) {
     int middley = (int)(pPlot.grid.y + pPlot.grid.height / 2);
 
     //If the plot is empty, then color in with brown soil to look like farming plot
-    if (pPlot.state == 0) {
+    if (pPlot.getState() == 0) {
         // EMPTY: light brown soil
         DrawRectangleRec(pPlot.grid, Color{210,180,140,255});  // tan brown shade
 
@@ -220,7 +293,7 @@ void DrawOnePlot(const GameState&, const Plot& pPlot) {
     }
     //State 1, meaning the plot is growing, create a green-ish background with keyword GROW and the timer counting to display to
     // the player the time that remains
-    if (pPlot.state == 1) {
+    if (pPlot.getState() == 1) {
         // GROWING: light green fill + labels
         DrawRectangleRec(pPlot.grid, Color{200, 235, 200, 180});
 
@@ -252,7 +325,7 @@ void DrawOnePlot(const GameState&, const Plot& pPlot) {
     }
 
     //if the plot is READY (state 2), create a white background, red border and checkmark
-    if (pPlot.state == 2) {
+    if (pPlot.getState() == 2) {
         // fill the plot with a light color to show it is ready
         DrawRectangleRec(pPlot.grid, Color{240,240,240,255});
 
@@ -288,7 +361,7 @@ void DrawOnePlot(const GameState&, const Plot& pPlot) {
 
 
 void DrawInventory(GameState& game3, Rectangle grid) {
-    CropAttributes* crops = GetSeasonCrops(game3.seasonIndex);
+    std::vector<CropAttributes> crops = GetSeasonCrops(game3);
 
      // draw the inventory grid and colors
     Color panelFill = Color{250, 250, 250, 255};   // very light gray/white
@@ -347,9 +420,10 @@ void DrawInventory(GameState& game3, Rectangle grid) {
         DrawRectangleLinesEx(section, 2.0f, slotBorder);
 
         // Create a label for increase of points i.e (Potato +10)
-        std::string cropName = crops[i].name;
-        int cropPointsValue  = crops[i].totalPoints;
-        std::string rowLabel = cropName + " (+" + std::to_string(cropPointsValue) + ")";
+        if (i < (int)crops.size()) {
+            std::string cropName = crops[i].name;
+            int cropPointsValue  = crops[i].totalPoints;
+            std::string rowLabel = cropName + " (+" + std::to_string(cropPointsValue) + ")";
 
         // Label centering and positioning
         int labelFont = 20;
@@ -357,11 +431,12 @@ void DrawInventory(GameState& game3, Rectangle grid) {
         // center-ish vertically: take row middle then shift up a bit by ~font half
         int labelY = (int)(section.y + (section.height / 2) - 10);
 
-        // Drawing the label depening on color and positioning
-        if (isUnlocked) {
-            DrawText(rowLabel.c_str(), labelX, labelY, labelFont, BLACK);
-        } else {
-            DrawText(rowLabel.c_str(), labelX, labelY, labelFont, GRAY);
+            // Drawing the label depening on color and positioning
+            if (isUnlocked) {
+                DrawText(rowLabel.c_str(), labelX, labelY, labelFont, BLACK);
+            } else {
+                DrawText(rowLabel.c_str(), labelX, labelY, labelFont, GRAY);
+            }
         }
 
         // If unlocked, select this crop
@@ -431,10 +506,8 @@ void HandleMovement(GameState& game4) {
 }
 
 void Planting(GameState& game5, Plot& p) {
-    //get the crops for the current season
-    const CropAttributes* crops = GetSeasonCrops(game5.seasonIndex);
     //make sure the plot is empty
-    if (p.state != 0) {
+    if (p.getState() != 0) {
         return;
     }
     //crop index is valid and a real crop is selected
@@ -446,39 +519,75 @@ void Planting(GameState& game5, Plot& p) {
         return;
     }
 
-    // start growing the crop
-    p.state = 1;
-    p.cropIndex = game5.selectCrop;
-    p.timeRemaining  = crops[p.cropIndex].growingTime; // capture growth time at plant
+    if (!game5.currentSeason) {
+        return;
+    }
+
+    std::vector<Seed*>& seeds = game5.currentSeason->getSeeds();
+    if (game5.selectCrop >= (int)seeds.size()) {
+        return;
+    }
+
+    // Get the selected seed and plant it
+    Seed* selectedSeed = seeds[game5.selectCrop];
+    
+    // start growing the crop using OOP
+    p.plantedSeed = selectedSeed;
+    p.currentState = new Planted(); // Create new planted state
+    p.timeRemaining = selectedSeed->get_GrowTime(); // capture growth time at plant
+    
+    // Reset the seed's harvest status for multiple harvests
+    selectedSeed->reset();
+    
+    // Call the OOP plant method
+    selectedSeed->plant();
 }
 
 void TryHarvest(GameState& game6, Plot& p) {
-    const CropAttributes* crops = GetSeasonCrops(game6.seasonIndex);
-
     //ensure the plot contains a fully grown crop
-    if (p.state != 2) {
+    if (p.getState() != 2) {
         return;
     }
-    //ensure crop index is valid
-    if (p.cropIndex < 0 || p.cropIndex > 2){ 
+    
+    if (!p.plantedSeed || !p.currentState || !game6.player) {
         return;
     }
-    //add crop points to a total score
-    game6.totalPoints += crops[p.cropIndex].totalPoints;
-    game6.harvested[p.cropIndex] = true;
-    // clear plot so that new crop could be planted
+
+    // Use OOP harvest method
+    int pointsEarned = p.plantedSeed->harvest();
+    std::cout << "DEBUG: Harvesting " << p.plantedSeed->get_Name() << " - points before: " << game6.player->getPoints() << std::endl;
+    game6.player->addPoints(pointsEarned);
+    std::cout << "DEBUG: Harvesting " << p.plantedSeed->get_Name() << " - points after: " << game6.player->getPoints() << std::endl;
+    
+    // Update GUI points display
+    game6.totalPoints = game6.player->getPoints();
+    
+    // Update harvested status for season completion logic
+    // Find which crop type this is and mark it as harvested
+    if (game6.currentSeason) {
+        std::vector<Seed*>& seeds = game6.currentSeason->getSeeds();
+        for (int i = 0; i < 3 && i < (int)seeds.size(); i++) {
+            if (seeds[i]->get_Name() == p.plantedSeed->get_Name()) {
+                game6.harvested[i] = true;
+                break;
+            }
+        }
+    }
+    
+    // Clear the plot immediately after harvest (like original game)
     p.Clear();
 }
 
 void UpdateGrowth(Plot& p, float timeFrame) {
     // only update the growth if the crop is in a growing stage
-    if (p.state == 1) {
+    if (p.getState() == 1) {
         // decrement the time
         p.timeRemaining -= timeFrame;
         // once the timer hits zero or less, the crop is ready to be collected and points can be added
         if (p.timeRemaining <= 0.0f) {
             p.timeRemaining = 0.0f;
-            p.state = 2; // ready
+            // Transition to harvestable state
+            p.currentState = new Harvestable();
         }
     }
 }
@@ -537,6 +646,10 @@ void RunFarmingGrid() {
 
     // --- now set up the game state variables ---
     GameState game7;
+
+    // Initialize OOP objects
+    game7.player = new Player();
+    game7.currentSeason = new Spring(); // Start with Spring season
 
     // start from the first season (Spring)
     game7.seasonIndex = 0;
@@ -604,6 +717,17 @@ void RunFarmingGrid() {
         if (game7.allSeasonsCompleted == false && collectedAll == true && game7.seasonTimeLeft > 0.0f) {
         if (game7.seasonIndex < 3) {
             game7.seasonIndex = game7.seasonIndex + 1;  // move to next season
+            
+            // Create new season object based on seasonIndex
+            delete game7.currentSeason; // Clean up old season
+            if (game7.seasonIndex == 1) {
+                game7.currentSeason = new Summer();
+            } else if (game7.seasonIndex == 2) {
+                game7.currentSeason = new Autumn();
+            } else if (game7.seasonIndex == 3) {
+                game7.currentSeason = new Winter();
+            }
+            
             ResetSeason(game7, plots); 
             } else {
                 //If we were already at winter, thus the game is done and all seasons are completed
@@ -671,13 +795,28 @@ void RunFarmingGrid() {
         // Inventory panel
         DrawInventory(game7, inventoryA);
 
+        // Total points display at bottom of screen
+        int screenH = GetScreenHeight();
+        int pointsFont = 24;
+        std::string pointsText = "Total Points: " + std::to_string(game7.totalPoints);
+        int pointsWidth = MeasureText(pointsText.c_str(), pointsFont);
+        int pointsX = (GetScreenWidth() - pointsWidth) / 2; // Center horizontally
+        int pointsY = screenH - 40; // Near bottom of screen
+        
+        // Draw background rectangle for points display
+        Rectangle pointsBg = {pointsX - 10, pointsY - 5, pointsWidth + 20, pointsFont + 10};
+        DrawRectangleRec(pointsBg, Color{240, 240, 240, 255}); // Light gray background
+        DrawRectangleLinesEx(pointsBg, 2.0f, BLACK); // Black border
+        
+        DrawText(pointsText.c_str(), pointsX, pointsY, pointsFont, BLACK);
+
         // Unlock thresholds for each crop in the inventory sections
-        const CropAttributes* crops = GetSeasonCrops(game7.seasonIndex);
+        std::vector<CropAttributes> crops = GetSeasonCrops(game7);
         int y = (int)(inventoryA.y + inventoryA.height + 10);
 
         DrawText("Unlocks:", (int)inventoryA.x + 12, y, 18, BLACK);
         y += 24;
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 3 && i < (int)crops.size(); i++) {
             std::string row = crops[i].name + ": " + std::to_string(crops[i].thresholdUnlock) + " pts";
             DrawText(row.c_str(), (int)inventoryA.x + 12, y, 18, DARKGRAY);
             y += 20;

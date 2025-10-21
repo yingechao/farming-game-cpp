@@ -15,6 +15,7 @@ class CropState {
  public:
   string stateName;
 
+  CropState(); // Constructor
   int getGrowthProgress();
   void setGrowthProgress(int growthProgress);
   void updateGrowth();

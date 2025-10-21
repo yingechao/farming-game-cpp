@@ -11,12 +11,8 @@ void Wheat::grow() {
 }
 
 int Wheat::harvest() {
-  if (!isHarvested) {
-    isHarvested = true;
-    std::cout << name << " harvested! +" << value << " points.\n";
-    return value;
-  }
-  return 0;
+  std::cout << name << " harvested! +" << value << " points.\n";
+  return value;
 }
 
 void Wheat::reset() { isHarvested = false; }

@@ -1,6 +1,12 @@
 #include "CropState.h"
 #include <iostream>
 
+CropState::CropState() {
+    growthProgress = 0;
+    isHarvestable = false;
+    stateName = "Unknown";
+}
+
 void CropState::setGrowthProgress(int growthProgress) {
     this->growthProgress = growthProgress;
 }

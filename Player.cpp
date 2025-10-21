@@ -84,6 +84,7 @@ void Player::resetProgress() {
   seedsOwned.clear();
   harvestedCrops.clear();
   currentSeed = nullptr;
+  points = 0; // Reset points to 0
 }
 
 void Player::addSeed(Seed* s) {

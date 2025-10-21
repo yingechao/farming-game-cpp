@@ -21,7 +21,7 @@ endif
 
 
 # Source files for GUI version
-GUI_SOURCES = RaylibOpeningSlide.cpp FarmingGrid.cpp
+GUI_SOURCES = RaylibOpeningSlide.cpp FarmingGrid.cpp Seed.cpp Player.cpp Season.cpp CropState.cpp Planted.cpp Harvestable.cpp Harvested.cpp Potato.cpp Strawberry.cpp Cauliflower.cpp Tomato.cpp Wheat.cpp Eggplant.cpp Carrot.cpp Lettuce.cpp Peas.cpp Kale.cpp Beetroot.cpp Onion.cpp Spring.cpp Summer.cpp Autumn.cpp Winter.cpp
 
 # Executables
 CONSOLE_TARGET = console_farming_game

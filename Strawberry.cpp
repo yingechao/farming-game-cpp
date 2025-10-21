@@ -16,13 +16,8 @@ void Strawberry::grow() {
 }
 
 int Strawberry::harvest() {
-  if (!isHarvested) {
-    isHarvested = true;
-    std::cout << name << " harvested! +" << value << " points.\n";
-    return value;
-  }
-  std::cout << name << " was already harvested!\n";
-  return 0;
+  std::cout << name << " harvested! +" << value << " points.\n";
+  return value;
 }
 
 void Strawberry::reset() { isHarvested = false; }
