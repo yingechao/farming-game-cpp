@@ -269,9 +269,7 @@ void ResetSeason(GameState& game2, Plot plots[4]) {
     
     // Reset player points for new season
     if (game2.player) {
-        std::cout << "DEBUG: Resetting season - points before: " << game2.player->getPoints() << std::endl;
         game2.player->resetProgress();
-        std::cout << "DEBUG: Resetting season - points after: " << game2.player->getPoints() << std::endl;
     }
     game2.totalPoints = 0; // per-season points
 }
@@ -555,9 +553,7 @@ void TryHarvest(GameState& game6, Plot& p) {
 
     // Use OOP harvest method
     int pointsEarned = p.plantedSeed->harvest();
-    std::cout << "DEBUG: Harvesting " << p.plantedSeed->get_Name() << " - points before: " << game6.player->getPoints() << std::endl;
     game6.player->addPoints(pointsEarned);
-    std::cout << "DEBUG: Harvesting " << p.plantedSeed->get_Name() << " - points after: " << game6.player->getPoints() << std::endl;
     
     // Update GUI points display
     game6.totalPoints = game6.player->getPoints();
@@ -804,7 +800,7 @@ void RunFarmingGrid() {
         int pointsY = screenH - 40; // Near bottom of screen
         
         // Draw background rectangle for points display
-        Rectangle pointsBg = {pointsX - 10, pointsY - 5, pointsWidth + 20, pointsFont + 10};
+        Rectangle pointsBg = {(float)(pointsX - 10), (float)(pointsY - 5), (float)(pointsWidth + 20), (float)(pointsFont + 10)};
         DrawRectangleRec(pointsBg, Color{240, 240, 240, 255}); // Light gray background
         DrawRectangleLinesEx(pointsBg, 2.0f, BLACK); // Black border
         

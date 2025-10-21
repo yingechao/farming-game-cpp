@@ -8,6 +8,12 @@
 #include "Strawberry.h"
 #include "Tomato.h"
 #include "Wheat.h"
+#include "Carrot.h"
+#include "Lettuce.h"
+#include "Peas.h"
+#include "Kale.h"
+#include "Beetroot.h"
+#include "Onion.h"
 using namespace std;
 
 // Constructor

@@ -37,6 +37,9 @@ class Seed {
   // Resets the seed's state
   virtual void reset();
 
+  // Returns the points threshold needed to unlock this seed
+  int getPointsUnlockThreshold() const;
+
   // Virtual destructor ensures proper cleanup for derived classes
   virtual ~Seed() {}
 };

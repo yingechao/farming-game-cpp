@@ -3,7 +3,9 @@
 #include <iostream>
 
 // Initializes a Strawberry seed by calling the base Seed constructor
-Strawberry::Strawberry() : Seed("Strawberry", 7, 15) {}
+Strawberry::Strawberry() : Seed("Strawberry", 7, 15) {
+  pointsUnlockThreshold = 15; // Unlock after earning 15 points (1 potato harvest)
+}
 
 // Overrides the base plant() method with a strawberry-specific message.
 // Calls grow() afterward to simulate growth.

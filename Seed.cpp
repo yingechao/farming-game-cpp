@@ -52,6 +52,6 @@ void Seed::plant() {
   grow();
 }
 
-int Seed::getPointsUnlockThreshold(){
+int Seed::getPointsUnlockThreshold() const {
   return pointsUnlockThreshold;
 }
