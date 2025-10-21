@@ -11,7 +11,7 @@ class Beetroot : public Seed {
   // Constructor
   Beetroot();
 
-   void grow() override;
+  void grow() override;
   int harvest() override;
   void reset() override;
   void plant() override;
