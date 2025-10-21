@@ -3,7 +3,6 @@
 #include <string>
 #include <cstdio> // for snprintf
 
-// OOP includes
 #include "Seed.h"
 #include "Player.h"
 #include "Season.h"
@@ -27,6 +26,7 @@
 #include "Kale.h"
 #include "Beetroot.h"
 #include "Onion.h"
+#include "Game.h"
 
 //Defines crop behaviour in its respective seasons
 struct CropAttributes {
@@ -65,29 +65,31 @@ struct Plot {
 };
 
 struct GameState {
-    // OOP Integration
-    Player* player;            // OOP: Player class for points and progress
-    Season* currentSeason;     // OOP: Current season with seeds
-    int   seasonIndex;         // 0 = Spring, 1 = Summer, 2 = Autumn, 3 = Winter (keep for GUI)
-    float seasonTimeLeft;      // season timer (seconds)
-    bool  harvested[3];        // which crops harvested (keep for GUI compatibility)
+    // OOP Integration - Now using Game for encapsulation
+    Game* gameController;  // OOP: Centralized game logic controller
     int   selectPlot;          // 0..3
     int   selectCrop;          // 0..2
     bool  allSeasonsCompleted; // after Winter is completed and all goals met
-    int   totalPoints;         // GUI points display (synchronized with Player)
     
     // Constructor
-    GameState() : player(nullptr), currentSeason(nullptr), seasonIndex(0), 
-                  seasonTimeLeft(60.0f), selectPlot(0), selectCrop(0), 
-                  allSeasonsCompleted(false), totalPoints(0) {
-        for (int i = 0; i < 3; i++) harvested[i] = false;
+    GameState() : gameController(nullptr), selectPlot(0), selectCrop(0), 
+                  allSeasonsCompleted(false) {
+            gameController = new Game();
     }
     
     // Destructor
     ~GameState() {
-        delete player;
-        delete currentSeason;
+        delete gameController;
     }
+    
+    // Convenience getters that delegate to gameController
+    Player* getPlayer() const { return gameController ? gameController->getPlayer() : nullptr; }
+    Season* getCurrentSeason() const { return gameController ? gameController->getCurrentSeason() : nullptr; }
+    int getSeasonIndex() const { return gameController ? gameController->getSeasonIndex() : 0; }
+    float getSeasonTimeLeft() const { return gameController ? gameController->getSeasonTimeLeft() : 0.0f; }
+    int getTotalPoints() const { return gameController ? gameController->getTotalPoints() : 0; }
+    bool isCropUnlocked(int cropIndex) const { return gameController ? gameController->isCropUnlocked(cropIndex) : false; }
+    bool isCropHarvested(int cropIndex) const { return gameController ? gameController->isCropHarvested(cropIndex) : false; }
 };
 
 int FARM_SCREEN_WIDTH  = 1000;
@@ -108,11 +110,11 @@ const char* SEASONS[4] = {
 std::vector<CropAttributes> GetSeasonCrops(GameState& game) {
     std::vector<CropAttributes> crops;
     
-    if (!game.currentSeason) {
+    if (!game.getCurrentSeason()) {
         return crops;
     }
     
-    std::vector<Seed*>& seeds = game.currentSeason->getSeeds();
+    std::vector<Seed*>& seeds = game.getCurrentSeason()->getSeeds();
     for (int i = 0; i < 3 && i < (int)seeds.size(); i++) {
         Seed* seed = seeds[i];
         CropAttributes attr;
@@ -214,42 +216,14 @@ int centeredT(std::string& text, int fontSize, int screenWidth) {
 }
 
 bool cropUnlocked(GameState& game, int cropIndex) {
-    if (cropIndex < 0 || cropIndex > 2){
-        return false; // out of bounds, just a sanity check
-    }
-
-    if (!game.currentSeason) {
-        return false;
-    }
-
-    std::vector<Seed*>& seeds = game.currentSeason->getSeeds();
-    if (cropIndex >= (int)seeds.size()) {
-        return false;
-    }
-
-    Seed* seed = seeds[cropIndex];
-    int pointsNeeded = seed->getPointsUnlockThreshold();
-    int playerPts = game.totalPoints;
-
-    //To determine if the crop has been unlocked
-    bool unlocked = false;
-    if (playerPts >= pointsNeeded){
-        unlocked = true;
-    }
-    return unlocked;
+    // Delegate to gameController for OOP encapsulation
+    return game.isCropUnlocked(cropIndex);
 }
 
 // beginner-style helper: check if all 3 crops are harvested
 bool HarvestedAllThree(GameState& g) {
-    bool first  = g.harvested[0];
-    bool second = g.harvested[1];
-    bool third  = g.harvested[2];
-
-    if (first && second && third) {
-        return true;
-    } else {
-        return false;
-    }
+    // Delegate to gameController for OOP encapsulation
+    return g.gameController && g.gameController->checkProgress();
 }
 
 void ResetSeason(GameState& game2, Plot plots[4]) {
@@ -257,21 +231,15 @@ void ResetSeason(GameState& game2, Plot plots[4]) {
     for (int i = 0; i < 4; i++) {
         plots[i].Clear();
     }
-    //reset the season timer
-    game2.seasonTimeLeft = SEASON_TIME_SECONDS;
-
-    //reset the harvested crops to false (assume none have been harvested yet)
-    for (int i = 0; i < 3; i++) {
-        game2.harvested[i] = false;
-    }
+    
+    //reset GUI selection
     game2.selectPlot = 0;
     game2.selectCrop = 0;
     
-    // Reset player points for new season
-    if (game2.player) {
-        game2.player->resetProgress();
+    // Delegate season reset to gameController for OOP encapsulation
+    if (game2.gameController) {
+        game2.gameController->resetSeason();
     }
-    game2.totalPoints = 0; // per-season points
 }
 
 
@@ -452,7 +420,7 @@ void DrawInventory(GameState& game3, Rectangle grid) {
         // If locked, display the points needed underneath each crop
         int neededPoints = crops[i].thresholdUnlock;
         if (!isUnlocked && neededPoints > 0) {
-            int playerPointsNow = game3.totalPoints;
+            int playerPointsNow = game3.getTotalPoints();
 
             // build something like "12 / 45 pts", determining and showing the earned and threshold difference
             std::string progressText = std::to_string(playerPointsNow) + " / " +
@@ -504,87 +472,23 @@ void HandleMovement(GameState& game4) {
 }
 
 void Planting(GameState& game5, Plot& p) {
-    //make sure the plot is empty
-    if (p.getState() != 0) {
-        return;
+    // Delegate to gameController for OOP encapsulation
+    if (game5.gameController) {
+        game5.gameController->plantSeed(p, game5.selectCrop);
     }
-    //crop index is valid and a real crop is selected
-    if (game5.selectCrop < 0 || game5.selectCrop > 2) {
-        return;
-    }
-    //determine if the crop is unlocked yet
-    if (!cropUnlocked(game5, game5.selectCrop)) {
-        return;
-    }
-
-    if (!game5.currentSeason) {
-        return;
-    }
-
-    std::vector<Seed*>& seeds = game5.currentSeason->getSeeds();
-    if (game5.selectCrop >= (int)seeds.size()) {
-        return;
-    }
-
-    // Get the selected seed and plant it
-    Seed* selectedSeed = seeds[game5.selectCrop];
-    
-    // start growing the crop using OOP
-    p.plantedSeed = selectedSeed;
-    p.currentState = new Planted(); // Create new planted state
-    p.timeRemaining = selectedSeed->get_GrowTime(); // capture growth time at plant
-    
-    // Reset the seed's harvest status for multiple harvests
-    selectedSeed->reset();
-    
-    // Call the OOP plant method
-    selectedSeed->plant();
 }
 
 void TryHarvest(GameState& game6, Plot& p) {
-    //ensure the plot contains a fully grown crop
-    if (p.getState() != 2) {
-        return;
+    // Delegate to gameController for OOP encapsulation
+    if (game6.gameController) {
+        game6.gameController->harvestSeed(p);
     }
-    
-    if (!p.plantedSeed || !p.currentState || !game6.player) {
-        return;
-    }
-
-    // Use OOP harvest method
-    int pointsEarned = p.plantedSeed->harvest();
-    game6.player->addPoints(pointsEarned);
-    
-    // Update GUI points display
-    game6.totalPoints = game6.player->getPoints();
-    
-    // Update harvested status for season completion logic
-    // Find which crop type this is and mark it as harvested
-    if (game6.currentSeason) {
-        std::vector<Seed*>& seeds = game6.currentSeason->getSeeds();
-        for (int i = 0; i < 3 && i < (int)seeds.size(); i++) {
-            if (seeds[i]->get_Name() == p.plantedSeed->get_Name()) {
-                game6.harvested[i] = true;
-                break;
-            }
-        }
-    }
-    
-    // Clear the plot immediately after harvest (like original game)
-    p.Clear();
 }
 
-void UpdateGrowth(Plot& p, float timeFrame) {
-    // only update the growth if the crop is in a growing stage
-    if (p.getState() == 1) {
-        // decrement the time
-        p.timeRemaining -= timeFrame;
-        // once the timer hits zero or less, the crop is ready to be collected and points can be added
-        if (p.timeRemaining <= 0.0f) {
-            p.timeRemaining = 0.0f;
-            // Transition to harvestable state
-            p.currentState = new Harvestable();
-        }
+void UpdateGrowth(GameState& game, Plot& p, float timeFrame) {
+    // Delegate to gameController for OOP encapsulation
+    if (game.gameController) {
+        game.gameController->updateGrowth(p, timeFrame);
     }
 }
 // This is the code for the farming plots
@@ -643,18 +547,10 @@ void RunFarmingGrid() {
     // --- now set up the game state variables ---
     GameState game7;
 
-    // Initialize OOP objects
-    game7.player = new Player();
-    game7.currentSeason = new Spring(); // Start with Spring season
-
-    // start from the first season (Spring)
-    game7.seasonIndex = 0;
-
-    // set the timer for the season (e.g., 60 seconds)
-    game7.seasonTimeLeft = SEASON_TIME_SECONDS;
-
-    // start the user with zero points
-    game7.totalPoints = 0;
+    // Initialize game using OOP controller
+    if (game7.gameController) {
+        game7.gameController->startGame();
+    }
 
     // start on the first plot and first crop
     game7.selectPlot = 0;
@@ -663,10 +559,7 @@ void RunFarmingGrid() {
     // we haven’t finished all seasons yet
     game7.allSeasonsCompleted = false;
 
-    // make sure all crops start unharvested
-    game7.harvested[0] = false;
-    game7.harvested[1] = false;
-    game7.harvested[2] = false;
+    // make sure all crops start unharvested (handled by gameController)
 
 
     while (!WindowShouldClose()) {
@@ -678,10 +571,9 @@ void RunFarmingGrid() {
             break; // return to menu
         }
 
-        // Tick season timer, decrease the seasons time and it cannot fall under 0
-        game7.seasonTimeLeft -= remaining;
-        if (game7.seasonTimeLeft < 0){
-            game7.seasonTimeLeft = 0;
+        // Tick season timer - handled by gameController
+        if (game7.gameController) {
+            game7.gameController->updateTime(remaining);
         } 
 
         // Movement + actions
@@ -702,37 +594,31 @@ void RunFarmingGrid() {
 
         //Update all plots so growing crops continue to countdown towards ready
         for (int i = 0; i < 4; i++) {
-            UpdateGrowth(plots[i], remaining);
+            UpdateGrowth(game7, plots[i], remaining);
         }
 
         // advance season if finished early, before the time ends
-    
-        bool collectedAll = (game7.harvested[0] && game7.harvested[1] && game7.harvested[2]);
-
-        // if we finished early (before timer ends) go to next season
-        if (game7.allSeasonsCompleted == false && collectedAll == true && game7.seasonTimeLeft > 0.0f) {
-        if (game7.seasonIndex < 3) {
-            game7.seasonIndex = game7.seasonIndex + 1;  // move to next season
+        if (game7.gameController && !game7.allSeasonsCompleted) {
+            bool collectedAll = HarvestedAllThree(game7);
+            float timeLeft = game7.getSeasonTimeLeft();
             
-            // Create new season object based on seasonIndex
-            delete game7.currentSeason; // Clean up old season
-            if (game7.seasonIndex == 1) {
-                game7.currentSeason = new Summer();
-            } else if (game7.seasonIndex == 2) {
-                game7.currentSeason = new Autumn();
-            } else if (game7.seasonIndex == 3) {
-                game7.currentSeason = new Winter();
-            }
-            
-            ResetSeason(game7, plots); 
-            } else {
-                //If we were already at winter, thus the game is done and all seasons are completed
-                game7.allSeasonsCompleted = true;
+            // if we finished early (before timer ends) go to next season
+            if (collectedAll && timeLeft > 0.0f) {
+                game7.gameController->nextLevel();
+                ResetSeason(game7, plots);
+                
+                // Start timer for the new season
+                game7.gameController->startSeasonTimer();
+                
+                // Check if game is over
+                if (game7.gameController->isGameOverStatus()) {
+                    game7.allSeasonsCompleted = true;
+                }
             }
         }
 
         // allow retry if time expired without finishing
-        if (!game7.allSeasonsCompleted && game7.seasonTimeLeft <= 0.0f && !HarvestedAllThree(game7)) {
+        if (!game7.allSeasonsCompleted && game7.getSeasonTimeLeft() <= 0.0f && !HarvestedAllThree(game7)) {
             if (IsKeyPressed(KEY_ENTER)) ResetSeason(game7, plots);
         }
 
@@ -741,9 +627,9 @@ void RunFarmingGrid() {
 
         // Season heading (coloured) drawn once
         if (!game7.allSeasonsCompleted) {
-            const char* seasonHeading = SEASONS[game7.seasonIndex];
+            const char* seasonHeading = SEASONS[game7.getSeasonIndex()];
             //retrieve the respective color for each seasons heading
-            Color seasonCol = GetSeasonColor(game7.seasonIndex);
+            Color seasonCol = GetSeasonColor(game7.getSeasonIndex());
             
             int headX = 24;
             int headY = 20;
@@ -760,7 +646,7 @@ void RunFarmingGrid() {
         int screenW = GetScreenWidth();
         int tf = 28;
         //Round timer to nearest second
-        int secondsLeft = (int)(game7.seasonTimeLeft + 0.5f);
+        int secondsLeft = (int)(game7.getSeasonTimeLeft() + 0.5f);
         std::string timeText = "Time: " + std::to_string(secondsLeft) + "s";
 
         int timeW = MeasureText(timeText.c_str(), tf);
@@ -794,7 +680,7 @@ void RunFarmingGrid() {
         // Total points display at bottom of screen
         int screenH = GetScreenHeight();
         int pointsFont = 24;
-        std::string pointsText = "Total Points: " + std::to_string(game7.totalPoints);
+        std::string pointsText = "Total Points: " + std::to_string(game7.getTotalPoints());
         int pointsWidth = MeasureText(pointsText.c_str(), pointsFont);
         int pointsX = (GetScreenWidth() - pointsWidth) / 2; // Center horizontally
         int pointsY = screenH - 40; // Near bottom of screen
@@ -819,7 +705,8 @@ void RunFarmingGrid() {
         }
 
         // Overlays, first for when the timer has ended and not all the crops have been unlocked, planted or harvested
-        if (game7.allSeasonsCompleted == false && game7.seasonTimeLeft <= 0.0f && collectedAll == false) {
+        bool collectedAll = HarvestedAllThree(game7);
+        if (game7.allSeasonsCompleted == false && game7.getSeasonTimeLeft() <= 0.0f && collectedAll == false) {
         std::string bigMessage   = "Time's up!";
         std::string smallMessage = "Press ENTER to retry this season, or ESC to return to the menu.";
 
@@ -887,7 +774,9 @@ void RunFarmingGrid() {
             //If enter is pressed and all the seasons are completed everything resets
             if (IsKeyPressed(KEY_ENTER)) {
                 game7.allSeasonsCompleted = false;
-                game7.seasonIndex = 0;
+                if (game7.gameController) {
+                    game7.gameController->startGame();
+                }
                 ResetSeason(game7, plots);
             }
         }
