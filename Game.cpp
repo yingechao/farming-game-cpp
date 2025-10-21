@@ -4,22 +4,24 @@
 #include <iostream>
 #include <thread>
 
+#include "Autumn.h"
 #include "Spring.h"
 #include "Summer.h"
-#include "Autumn.h"
-#include "Winter.h"
+// #include "Autumn.h"
+// #include "Winter.h"
 
 using namespace std;
 
 // Constructor & Destructor
 Game::Game()
-    : currentLevel(1),
-      timeLimit(60),
-      isGameOver(false),
-      currentSeason(nullptr),
-  currentSeedStartTime(0.0), seasonStartScore(0) {}
+    : currentLevel(1),               // start at level 1
+      timeLimit(60),                 // Default time limit (seconds)
+      isGameOver(false),             // game is not over at start
+      currentSeason(nullptr),        // No season allocated yet
+      currentSeedStartTime(0.0f) {}  // Seed timer starts at 0
 
 Game::~Game() {
+  // Clean up the current season if it exists to prevent memory leaks
   if (currentSeason) {
     delete currentSeason;
     currentSeason = nullptr;
@@ -31,18 +33,23 @@ double Game::getCurrentTime() const {
   using namespace std::chrono;
   auto now = high_resolution_clock::now();
   auto ms = duration_cast<milliseconds>(now.time_since_epoch()).count();
-  return ms / 1000.0;
+  return ms / 1000.0f;  // convert milliseconds to seconds
 }
 
+// Start the game: initializes the first season and seed
 void Game::startGame() {
-  // Start the game at level 1 and delegate to startLevel() so the
-  // concrete season constructors run and set season-specific data.
-  currentLevel = 1;
-  isGameOver = false;
-  startLevel();
+  // start with Spring
+
+  currentSeason = new Season(
+      "Spring", timeLimit);  // allocates a Season object and stores its address
+  currentSeedIndex = 0;      // first seed in season
+  currentSeed =
+      currentSeason->getSeeds()[currentSeedIndex];  // select current seed
+  isGameOver = false;                               // mark game as ongoing
+  std::cout << "\n Starting Spring season!\n";
 }
 
-// Start the current level
+// Start the current level/season based on currentLevel
 void Game::startLevel() {
   if (currentSeason) {
     delete currentSeason;
@@ -51,35 +58,27 @@ void Game::startLevel() {
 
   std::string seasonName;
   switch (currentLevel) {
-    case 1: seasonName = "Spring"; break;
-    case 2: seasonName = "Summer"; break;
-    case 3: seasonName = "Autumn"; break;
-    case 4: seasonName = "Winter"; break;
-    default: endGame(); return;
+    case 1:
+      seasonName = "Spring";
+      break;
+    case 2:
+      seasonName = "Summer";
+      break;
+    case 3:
+      seasonName = "Autumn";
+      break;
+    case 4:
+      seasonName = "Winter";
+      break;
+    default:
+      endGame();
+      return;
   }
 
-  // instantiate concrete season subclass so its constructor sets
-  // requiredPoints and any season-specific config
-  if (seasonName == "Spring")
-    currentSeason = new Spring();
-  else if (seasonName == "Summer")
-    currentSeason = new Summer();
-  else if (seasonName == "Autumn")
-    currentSeason = new Autumn();
-  else if (seasonName == "Winter")
-    currentSeason = new Winter();
-  else
-    currentSeason = new Season(seasonName, timeLimit);
-
-  currentSeason->start_Season();
-  startTime = std::chrono::steady_clock::now();
-  seasonStartScore = player.getPoints();
-
-  // initialize seed index and current seed pointer
-  currentSeedIndex = 0;
-  if (!currentSeason->getSeeds().empty())
-    currentSeed = currentSeason->getSeeds()[currentSeedIndex];
-
+  currentSeason =
+      new Season(seasonName, timeLimit);  // allocate memory for new season
+  currentSeason->start_Season();          // start season timer
+  startTime = getCurrentTime();           // record season start time
   cout << "Level " << currentLevel << ": " << seasonName
        << " season started!\n";
   if (currentSeason) {
@@ -88,51 +87,42 @@ void Game::startLevel() {
   }
 }
 // Handle timeout
+// restart current level
 void Game::handleTimeOut() {
-  cout << "⏰ Time’s up!\n";
-  int seasonPoints = player.getPoints() - seasonStartScore;
-  int required = 0;
-  if (currentSeason) required = currentSeason->getRequiredPoints();
-  cout << "Points this season: " << seasonPoints << " (required: "
-       << required << ")\n";
-  if (seasonPoints >= required) {
-    cout << "You reached the required points for this season! Advancing...\n";
-    // advance to next level
-    nextLevel();
-  } else {
-    cout << "You did NOT reach the required points. Restarting level...\n";
-    startLevel();
-  }
+  cout << "⏰ Time’s up! Restarting level.\n";
+  startLevel();
 }
 
 // Check if season time expired
 bool Game::isTimeUp() const {
   if (!currentSeason) return false;
-  using namespace std::chrono;
-  auto now = steady_clock::now();
-  auto elapsed = duration_cast<seconds>(now - startTime).count();
+  // checks time passed
+  float elapsed = getCurrentTime() - startTime;
   return elapsed >= currentSeason->getTimeLimit();
 }
 
-// Public wrapper used by main loop
+// Check if player has completed all seeds in the current season
 bool Game::checkProgress() {
   if (!currentSeason) return false;
   return currentSeason->allSeedsCompleted();
 }
 
-// End game
+// End the game and display final score
 void Game::endGame() {
   isGameOver = true;
   cout << "🌾 Game Over! Final score: " << player.getPoints() << "\n";
 }
 
-bool Game::isSeedTimeUp(double seedGrowTime) const {
-  double elapsed = getCurrentTime() - currentSeedStartTime;
+// Check if a specific seed's grow time has elapsed(passed)
+bool Game::isSeedTimeUp(float seedGrowTime) const {
+  float elapsed = getCurrentTime() - currentSeedStartTime;
   return elapsed >= seedGrowTime;
 }
 
+// Plant the current seed: update timer and call seed's plant function
 void Game::plantCurrentSeed() {
-  Seed* s = getCurrentSeed();
+  Seed* s =
+      getCurrentSeed();  // returns a pointer to the currently selected seed.
   if (!s) return;
   // If this seed was previously harvested, reset it so it can be planted again.
   s->reset();
@@ -140,49 +130,37 @@ void Game::plantCurrentSeed() {
   s->plant();
 }
 
+// Harvest the current seed: add points to player and return earned points
 int Game::harvestCurrentSeed() {
   Seed* seed = getCurrentSeed();
-  if (!seed) return 0;
+  if (!seed)
+    return 0;  //! s checks if the pointer s is null (nullptr), This is a safety
+               //! check to ensure there is a current seed before trying to use
+               //! it.
   int earned = seed->harvest();  // returns seed value
-  player.addPoints(earned);
-  // Show player's updated total after each harvest
-  std::cout << "Total points: " << player.getPoints() << "\n";
-  return earned;
+  player.addPoints(earned);      // update player score
+  return earned;                 // return points earned
 }
 
-// Access player
-Player& Game::getPlayer() { return player; }
+// Access the player object (by reference)
+Player& Game::getPlayer() {
+  return player;
+}  // returns reference to the member variable
+
+// Access the current season object (pointer)
 Season* Game::getCurrentSeason() { return currentSeason; }
+
+// Get the player's current score (read-only)
 int Game::getPlayerScore() const { return player.getPoints(); }
 
-//
-
+// Access the current season object (pointer)
 Seed* Game::getCurrentSeed() {
   if (!currentSeason) return nullptr;
   std::vector<Seed*>& seeds = currentSeason->getSeeds();
   if (currentSeedIndex < 0 || currentSeedIndex >= seeds.size()) return nullptr;
   return seeds[currentSeedIndex];
 }
-
-Seed* Game::selectNewSeed(int a){
-  if (!currentSeason) return nullptr;
-  std::vector<Seed*>& seeds = currentSeason->getSeeds();
- 
-  if (seeds.empty()) return nullptr;
-
-  // Treat `a` as a 1-based index coming from the UI (input "1" -> first seed).
-  int idx = a - 1;
-  if (currentSeedIndex < 0 || currentSeedIndex >= seeds.size()) return nullptr;
-
-  // Update the authoritative index and pointer so other Game methods
-  // (getCurrentSeed, plantCurrentSeed, advanceSeed, etc.) operate on the
-  // same selected seed.
-  this->currentSeedIndex = idx;
-  this->currentSeed = seeds[idx];
-  return seeds[idx];
-}
-
-//
+// Advance to the next seed in the current season or move to next season
 void Game::advanceSeed() {
   if (!currentSeason) return;
 
@@ -203,6 +181,7 @@ void Game::advanceSeed() {
   }
 }
 
+// Move to the next season or end the game if all seasons completed
 void Game::nextLevel() {
   // Advance the level and reuse startLevel() to ensure consistent
   // construction and initialization for the new season.

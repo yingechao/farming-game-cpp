@@ -9,25 +9,23 @@
 #include "Tomato.h"
 #include "Wheat.h"
 using namespace std;
-#include "Beetroot.h"
-#include "Carrot.h"
-#include "Kale.h"
-#include "Lettuce.h"
-#include "Peas.h"
-#include "Onion.h"
 
 // Constructor
+// constructs season with its name and time limit
 Season::Season(std::string seasonName, int limit)
-    : name(seasonName), timeLimit(limit), currentSeedIndex(0), requiredPoints(0) {
-  loadSeeds();
+    : name(seasonName), timeLimit(limit), currentSeedIndex(0) {
+  loadSeeds();  // populate the list of seeds for this season
 }
 
 // Destructor
+// Cleans up dynamically allocated Seed objects when the Season object is
+// destroyed.
 Season::~Season() {
-  for (auto seed : seeds) delete seed;
-  seeds.clear();
+  for (auto seed : seeds) delete seed;  // free memory for each Seed pointer
+  seeds.clear();                        // empty the vector after deletion
 }
 
+// Returns reference to the vector of Seed pointers
 std::vector<Seed*>& Season::getSeeds() { return seeds; }
 
 std::vector<std::string> Season::getSeedList() { return seedTypes; }
@@ -35,6 +33,8 @@ std::vector<std::string> Season::getSeedList() { return seedTypes; }
 int Season::getRequiredPoints() { return requiredPoints; }
 
 // Load seeds based on season
+// Creates new Seed objects and stores them in the vector.
+// The first seed is automatically unlocked.
 void Season::loadSeeds() {
   if (name == "Spring") {
     seeds.push_back(new Potato());
@@ -54,20 +54,23 @@ void Season::loadSeeds() {
     seeds.push_back(new Onion());
   }
 
-  currentSeedIndex = 0;  // unlock first seed
+  currentSeedIndex = 0;  // unlock first seed if available
   if (!seeds.empty()) unlockNextSeed();
 }
 
 // Get current seed
+// Returns a pointer to the currently active Seed.
+// Pointer to the current Seed object, or nullptr if none.
 Seed* Season::getCurrentSeed() {
   if (currentSeedIndex < seeds.size()) return seeds[currentSeedIndex];
   return nullptr;
 }
 
-// Check if more seeds left
+// Check if more seeds left unharvested
 bool Season::hasMoreSeeds() { return currentSeedIndex < seeds.size(); }
 
 // Unlock next seed
+// return Pointer to the next Seed object, or nullptr if all done.
 Seed* Season::unlockNextSeed() {
   if (currentSeedIndex + 1 < seeds.size()) {
     currentSeedIndex++;
@@ -79,6 +82,8 @@ Seed* Season::unlockNextSeed() {
 // Getters
 std::string Season::get_Name() { return name; }
 int Season::getTimeLimit() { return timeLimit; }
+
+// Checks whether the current seed index points to a valid seed.
 bool Season::isCurrentSeedAvailable() {
   return currentSeedIndex >= 0 && currentSeedIndex < seeds.size();
 }
@@ -116,6 +121,8 @@ void Season::resetSeason() {
   }
 }
 
+// Checks if the growing time for the current seed has expired.
+// return True if the elapsed time >= the seed’s grow time.
 bool Season::isSeedTimeUp(float elapsedTime) {
   if (currentSeedIndex < seeds.size()) {
     Seed* current = seeds[currentSeedIndex];
@@ -124,18 +131,21 @@ bool Season::isSeedTimeUp(float elapsedTime) {
   return false;
 }
 
+// Moves the index to the next seed in the vector.
 void Season::advanceSeed() {
   if (!seeds.empty() && currentSeedIndex < seeds.size() - 1) {
     currentSeedIndex++;
   } else {
     // All seeds done
     std::cout << "Season " << name << " completed!\n";
-    }
+  }
 }
 
+// Marks the season as completed and prints a message
 void Season::endSeason() {
   cout << "Season " << name << " completed!\n";
   completed = true;
 }
 
+// Returns true if the season has been marked as completed.
 bool Season::isCompleted() { return completed; }
