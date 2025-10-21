@@ -16,8 +16,5 @@ the player progresses to the next season.
 Controls:
 - Mouse for menus.
 - ESC to pause or go back.
-<<<<<<< HEAD
 - Use WASD to navigate grid
-=======
 - Use WASD to navigate grid
->>>>>>> 7904960462ed815e754ba612c3393625dc0165bf
