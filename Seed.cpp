@@ -30,14 +30,17 @@ void Seed::grow() {
 
 // Points gained from harvesting.
 int Seed::harvest() {
-  if (!isHarvested) {
-    isHarvested = true;
-    std::cout << name << " harvested! +" << value << " points.\n";
+      std::cout << name << " harvested! +" << value << " points.\n";
     return value;
-  } else {
-    std::cout << name << " was already harvested!\n";
-    return 0;
-  }
+
+  // if (!isHarvested) {
+  //   isHarvested = true;
+  //   std::cout << name << " harvested! +" << value << " points.\n";
+  //   return value;
+  // } else {
+  //   std::cout << name << " was already harvested!\n";
+  //   return 0;
+  // }
 }
 
 // Resets the seed's state so it can be replanted.
@@ -47,4 +50,8 @@ void Seed::reset() { isHarvested = false; }
 void Seed::plant() {
   std::cout << "Planting " << name << "...\n";
   grow();
+}
+
+int Seed::getPointsUnlockThreshold(){
+  return pointsUnlockThreshold;
 }

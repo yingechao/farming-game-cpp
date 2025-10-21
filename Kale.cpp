@@ -3,7 +3,9 @@
 
 #include "Seed.h"
 
-Kale::Kale() : Seed("Kale", 10, 26) {}
+Kale::Kale() : Seed("Kale", 10, 26) {
+    pointsUnlockThreshold = 0;
+}
 
 void Kale::grow() {
   std::cout << name << " is growing for " << growTime << " seconds.\n";

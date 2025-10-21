@@ -6,6 +6,7 @@
 
 #include "Player.h"
 #include "Season.h"
+#include "Seed.h"
 
 class Game {
  private:

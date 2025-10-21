@@ -2,7 +2,9 @@
 
 #include <iostream>
 
-Wheat::Wheat() : Seed("Wheat", 8, 18) {}  // initialize base Seed
+Wheat::Wheat() : Seed("Wheat", 8, 18) {
+    pointsUnlockThreshold = 35;
+}  // initialize base Seed
 
 void Wheat::grow() {
   std::cout << name << " is growing for " << growTime << " seconds.\n";

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <thread>
 
+#include "Autumn.h"
 #include "Spring.h"
 #include "Summer.h"
 // #include "Autumn.h"
@@ -28,7 +29,7 @@ Game::~Game() {
 }
 
 // Helper to get current system time in seconds
-float Game::getCurrentTime() const {
+double Game::getCurrentTime() const {
   using namespace std::chrono;
   auto now = high_resolution_clock::now();
   auto ms = duration_cast<milliseconds>(now.time_since_epoch()).count();
@@ -55,7 +56,7 @@ void Game::startLevel() {
     currentSeason = nullptr;
   }
 
-  string seasonName;
+  std::string seasonName;
   switch (currentLevel) {
     case 1:
       seasonName = "Spring";
@@ -80,8 +81,11 @@ void Game::startLevel() {
   startTime = getCurrentTime();           // record season start time
   cout << "Level " << currentLevel << ": " << seasonName
        << " season started!\n";
+  if (currentSeason) {
+    cout << "Required points for this season: "
+         << currentSeason->getRequiredPoints() << "\n";
+  }
 }
-
 // Handle timeout
 // restart current level
 void Game::handleTimeOut() {
@@ -120,6 +124,8 @@ void Game::plantCurrentSeed() {
   Seed* s =
       getCurrentSeed();  // returns a pointer to the currently selected seed.
   if (!s) return;
+  // If this seed was previously harvested, reset it so it can be planted again.
+  s->reset();
   currentSeedStartTime = getCurrentTime();
   s->plant();
 }
@@ -154,7 +160,6 @@ Seed* Game::getCurrentSeed() {
   if (currentSeedIndex < 0 || currentSeedIndex >= seeds.size()) return nullptr;
   return seeds[currentSeedIndex];
 }
-
 // Advance to the next seed in the current season or move to next season
 void Game::advanceSeed() {
   if (!currentSeason) return;
@@ -165,35 +170,26 @@ void Game::advanceSeed() {
     currentSeedIndex++;
     currentSeed = currentSeason->getSeeds()[currentSeedIndex];
   } else {
-    // All seeds in this season are done → move to next season
-    nextLevel();
+    // Reached the end of the seed list. Only advance to next season if all
+    // seeds have actually been harvested. This prevents progressing when a
+    // player has selected or planted the last seed but not harvested it.
+    if (currentSeason->allSeedsCompleted()) {
+      nextLevel();
+    } else {
+      std::cout << "Cannot advance: not all seeds have been harvested yet.\n";
+    }
   }
 }
 
 // Move to the next season or end the game if all seasons completed
 void Game::nextLevel() {
-  // Move to next season
-  if (currentSeason->get_Name() == "Spring") {
-    delete currentSeason;
-    currentSeason = new Season("Summer", timeLimit);
-    currentSeedIndex = 0;
-    currentSeed = currentSeason->getSeeds()[currentSeedIndex];
-    std::cout << "\n Summer has begun!\n";
-  } else if (currentSeason->get_Name() == "Summer") {
-    delete currentSeason;
-    currentSeason = new Season("Autumn", timeLimit);
-    currentSeedIndex = 0;
-    currentSeed = currentSeason->getSeeds()[currentSeedIndex];
-    std::cout << "\n Autumn has begun!\n";
-  } else if (currentSeason->get_Name() == "Autumn") {
-    delete currentSeason;
-    currentSeason = new Season("Winter", timeLimit);
-    currentSeedIndex = 0;
-    currentSeed = currentSeason->getSeeds()[currentSeedIndex];
-    std::cout << "\n  Winter has begun!\n";
-  } else {
-    // All seasons completed — end game
+  // Advance the level and reuse startLevel() to ensure consistent
+  // construction and initialization for the new season.
+  currentLevel++;
+  if (currentLevel > 4) {
     std::cout << "\n All seasons completed! Game Over.\n";
     endGame();
+    return;
   }
+  startLevel();
 }

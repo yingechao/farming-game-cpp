@@ -9,6 +9,7 @@ class Seed {
   float growTime;
   int value;
   bool isHarvested;
+  int pointsUnlockThreshold;
 
  public:
   //  Constructs a Seed object with a name, growth time, and value.
