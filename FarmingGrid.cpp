@@ -2,6 +2,9 @@
 #include "raylib.h"
 #include <string>
 #include <cstdio> // for snprintf
+#include <vector>
+#include <fstream>
+#include <sstream>
 
 #include "Seed.h"
 #include "Player.h"
@@ -27,6 +30,116 @@
 #include "Beetroot.h"
 #include "Onion.h"
 #include "Game.h"
+#include "FarmingGrid.h"
+
+
+//Function determines whether the mouse is hovering within the area of the button. To ensure
+//accuracy so that the program knows when to register a click.
+bool MouseInside(Rectangle area) {
+
+    //Built in library function that helps to determine the x and y coordinates of the mouse
+    Vector2 position = GetMousePosition();
+
+    // Determine if the mouse's x coordinate is within the rectangles width range
+    bool inside_horizontal = false;
+    if (position.x >= area.x && position.x <= area.x + area.width){
+        inside_horizontal = true;
+    }
+    //Determine if the mouse's y coordinate is within the rectangles height range
+    bool inside_vertical = false;
+    if(position.y >= area.y && position.y <= area.y + area.height){
+        inside_vertical = true;
+    }
+    
+    //If both x and y are within the ranges of the rectangle, then it returns true and the mouse is within the rectangle
+    if(inside_horizontal && inside_vertical){
+        return true;
+    }else{
+        return false;
+    }
+
+}
+
+// Returns true if the mouse is within the button and it was pressed
+bool isButtonClicked(Rectangle button) {
+    //Check if the mouse is within the button area
+    bool mouseInside = MouseInside(button);
+
+    //Check if the mouse button was pressed
+    bool mousePressed = false;
+    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)){
+        mousePressed = true;
+    }
+
+    if(mouseInside && mousePressed){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+int GetCenterText(std::string text, int fontSize, int screenWidth) {
+    //Determine width of text in pixels
+    int textWidth = MeasureText(text.c_str(), fontSize);
+
+    //Determine the position of the text and place it in the center with equal space on either side
+    int extraSpace = screenWidth - textWidth;
+    int centered = extraSpace/2;
+   
+   return centered;
+}
+
+//Function for drawing and coloring a buttton
+void DrawSimpleButton(Button b, int fontSize) {
+    Color fill;
+    
+    if (MouseInside(b.box)){
+        fill = Color{102,191,255,255}; // fill with skyblue when mouse hovers over button otherwise fill with white
+
+    }else{
+        fill = RAYWHITE;
+    }
+    DrawRectangleRec(b.box, fill);
+    DrawRectangleLinesEx(b.box, 2.0f, BLACK);
+    
+    //Checking the top, bottom and space on the sides to ensure that the text and button is centered properly
+    int textWidth = MeasureText(b.text.c_str(), fontSize);
+    int textSpace = b.box.x + (b.box.width - textWidth)/2;
+    int textSpace2 = b.box.y + (b.box.height - fontSize) / 2;
+
+    DrawText(b.text.c_str(), textSpace, textSpace2, fontSize, BLACK);
+}
+
+//Reads the instructions file and returns all the text inside like one really big string
+std::string ReadTextFile(std::string filePath) {
+    std::ifstream file(filePath);
+
+    if (!file.is_open()){
+
+        return "instructions.txt not found.";
+    }
+    std::string line;
+    std::string allContent;
+    while (std::getline(file, line)) {
+        allContent += line + "\n";
+    }
+        return allContent;
+}
+
+//Function splits the big string into a vector with one element per vector so that each line is individually displayed
+std::vector<std::string> SplitLines(std::string instructions) {
+
+    std::vector<std::string> lines;
+    std::stringstream buffer(instructions);
+    std::string line;
+
+    while (std::getline(buffer, line)) {
+        lines.push_back(line);
+    }
+    return lines;
+}
+
+// ===== END DESIGN FUNCTIONS =====
 
 //Defines crop behaviour in its respective seasons
 struct CropAttributes {
