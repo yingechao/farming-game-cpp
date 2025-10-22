@@ -21,25 +21,20 @@ class Player {
   string name;
   Seed* currentSeed;  // Pointer to the currently selected seed
 
-  Player();  // Constructor: initializes player variables
+  Player();  // Constructor
 
   void addPoints(int pointsToAdd);  // Adds points to the player's score
-  bool hasCompletedSeason();  // Returns true if the player has accumulated
-                              // enough points to complete the season
+  bool hasCompletedSeason(); 
 
-  int getPoints() const;  // Returns current points (read-only)
+  int getPoints() const;  // Returns current points 
   std::string getName();  // Returns player's name
   void setName(const std::string& playerName);  // Sets player's name
-  void selectSeed(
-      string seedType);  // Select a seed to use, based on the seed type
+  void selectSeed(string seedType);  // Select a seed to use
 
-  void resetProgress();  // clears harvested crops and current seed, but does
-                         // not delete seedsOwned
+  void resetProgress();  // clears harvested crops and current seed, but does not delete seedsOwned
 
   void addSeed(Seed* s);  // Add a seed to the player's collection
-  void setSeeds(
-      const std::vector<Seed*>& seeds);  // Replace the player's owned seeds
-                                         // with a new vector of seeds
+  void setSeeds(const std::vector<Seed*>& seeds);  // Replace the player's owned seeds with a new vector of seeds
   std::vector<Seed*>&
   getOwnedSeeds();  // Returns a reference to the vector of owned seeds
 };

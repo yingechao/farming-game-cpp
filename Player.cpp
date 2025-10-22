@@ -44,7 +44,7 @@ void Player::selectSeed(string seedType) {
 // Reset player progress for a season
 // Clears references but does NOT delete seeds themselves
 void Player::resetProgress() {
-  // Player doesn't own the seeds — just clear references
+  // Player doesn't own the seeds --- just clear references
   seedsOwned.clear();
   harvestedCrops.clear();
   currentSeed = nullptr;
@@ -53,9 +53,7 @@ void Player::resetProgress() {
 
 // Add a seed to the player's collection
 void Player::addSeed(Seed* s) {
-  // push_back() is a member function primarily associated with sequence
-  // containers like std::vector and std::list. Its purpose is to add a new
-  // element to the end of the container.
+  // push_back() new seed on seedsOwned vector
   if (s) seedsOwned.push_back(s);
 }
 
@@ -65,5 +63,5 @@ void Player::setSeeds(const std::vector<Seed*>& seeds) { seedsOwned = seeds; }
 // Set the player's name
 void Player::setName(const std::string& playerName) { name = playerName; }
 
-// Get the vector of seeds owned by the player (by reference)
+// Get the vector of seeds owned by the player , returns reference to vector 
 std::vector<Seed*>& Player::getOwnedSeeds() { return seedsOwned; }

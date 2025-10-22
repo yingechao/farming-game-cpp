@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-Tomato::Tomato() : Seed("Tomato", 9, 24) {
+Tomato::Tomato() : Seed("Tomato", 9, 15) {
   pointsUnlockThreshold = 0;
 }  // initialize base Seed
 

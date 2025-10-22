@@ -4,7 +4,7 @@
 #include "Seed.h"
 
 Onion::Onion() : Seed("Onion", 14, 30) {
-    pointsUnlockThreshold = 100;
+    pointsUnlockThreshold = 300;
 }
 
 void Onion::grow() {

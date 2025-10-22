@@ -4,7 +4,7 @@
 #include "Seed.h"
 
 Lettuce::Lettuce() : Seed("Lettuce", 9, 24) {
-    pointsUnlockThreshold = 50;
+    pointsUnlockThreshold = 80;
 }
 
 void Lettuce::grow() {

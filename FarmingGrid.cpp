@@ -1,4 +1,4 @@
-// FarmingGrid.cpp 
+
 #include "raylib.h"
 #include <string>
 #include <cstdio> // for snprintf
@@ -33,14 +33,13 @@
 #include "FarmingGrid.h"
 
 
-//Function determines whether the mouse is hovering within the area of the button. To ensure
-//accuracy so that the program knows when to register a click.
+//Function determines whether the mouse is hovering within the area of the button
 bool MouseInside(Rectangle area) {
 
     //Built in library function that helps to determine the x and y coordinates of the mouse
     Vector2 position = GetMousePosition();
 
-    // Determine if the mouse's x coordinate is within the rectangles width range
+    // Check if the mouse's x coordinate is within the rectangles width range
     bool inside_horizontal = false;
     if (position.x >= area.x && position.x <= area.x + area.width){
         inside_horizontal = true;
@@ -110,7 +109,7 @@ void DrawSimpleButton(Button b, int fontSize) {
     DrawText(b.text.c_str(), textSpace, textSpace2, fontSize, BLACK);
 }
 
-//Reads the instructions file and returns all the text inside like one really big string
+//Read the instructions file and return all the text inside like one really big string
 std::string ReadTextFile(std::string filePath) {
     std::ifstream file(filePath);
 
@@ -126,7 +125,7 @@ std::string ReadTextFile(std::string filePath) {
         return allContent;
 }
 
-//Function splits the big string into a vector with one element per vector so that each line is individually displayed
+//Function splits the big string into a vector
 std::vector<std::string> SplitLines(std::string instructions) {
 
     std::vector<std::string> lines;
@@ -139,15 +138,14 @@ std::vector<std::string> SplitLines(std::string instructions) {
     return lines;
 }
 
-// ===== END DESIGN FUNCTIONS =====
 
-//Defines crop behaviour in its respective seasons
+//Defines crop behaviour 
 struct CropAttributes {
-    std::string name;      // inventory name
-    int   thresholdUnlock; // points needed to unlock next crop
-    int   totalPoints;     // points gained on harvest of each crop
+    std::string name;      // name
+    int   thresholdUnlock; // points required
+    int   totalPoints;     // points gained 
     float growingTime;     // growth time
-    Color color;           // visual while growing
+    Color color;           // colour while growing
 };
 
 // Plot struct implementation
@@ -180,10 +178,10 @@ int Plot::getCropIndex() const {
 }
 
 struct GameState {
-    // OOP Integration - Now using Game for encapsulation
-    Game* gameController;  // OOP: Centralized game logic controller
-    int   selectPlot;          // 0..3
-    int   selectCrop;          // 0..2
+ 
+    Game* gameController; 
+    int   selectPlot;       
+    int   selectCrop;         
     bool  allSeasonsCompleted; // after Winter is completed and all goals met
     
     // Constructor
@@ -197,7 +195,7 @@ struct GameState {
         delete gameController;
     }
     
-    // Convenience getters that delegate to gameController
+    // getters
     Player* getPlayer() const { return gameController ? gameController->getPlayer() : nullptr; }
     Season* getCurrentSeason() const { return gameController ? gameController->getCurrentSeason() : nullptr; }
     int getSeasonIndex() const { return gameController ? gameController->getSeasonIndex() : 0; }
@@ -221,7 +219,7 @@ const char* SEASONS[4] = {
     "Winter" 
 };
 
-// Helper function to get crop attributes from OOP Season
+// Helper function to get crop attributes 
 std::vector<CropAttributes> GetSeasonCrops(GameState& game) {
     std::vector<CropAttributes> crops;
     
@@ -274,9 +272,9 @@ Color GetSeasonColor(int seasonIndex) {
     } 
 }
 
-} // end anonymous namespace
+}
 
-//Same from the Opening File
+
 bool isMouseInside(Rectangle area) {
 
     //Built in library function that helps to determine the x and y coordinates of the mouse
@@ -335,7 +333,7 @@ bool cropUnlocked(GameState& game, int cropIndex) {
     return game.isCropUnlocked(cropIndex);
 }
 
-// beginner-style helper: check if all 3 crops are harvested
+
 bool HarvestedAllThree(GameState& g) {
     // Delegate to gameController for OOP encapsulation
     return g.gameController && g.gameController->checkProgress();
@@ -587,14 +585,14 @@ void HandleMovement(GameState& game4) {
 }
 
 void Planting(GameState& game5, Plot& p) {
-    // Delegate to gameController for OOP encapsulation
+
     if (game5.gameController) {
         game5.gameController->plantSeed(p, game5.selectCrop);
     }
 }
 
 void TryHarvest(GameState& game6, Plot& p) {
-    // Delegate to gameController for OOP encapsulation
+
     if (game6.gameController) {
         game6.gameController->harvestSeed(p);
     }
@@ -606,7 +604,7 @@ void UpdateGrowth(GameState& game, Plot& p, float timeFrame) {
         game.gameController->updateGrowth(p, timeFrame);
     }
 }
-// This is the code for the farming plots
+// for farming plots
 void RunFarmingGrid() {
     InitWindow(FARM_SCREEN_WIDTH, FARM_SCREEN_HEIGHT, "Farming Grid");
     SetTargetFPS(TARGET);

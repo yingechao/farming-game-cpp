@@ -17,18 +17,16 @@
 
 class Game {
 private:
-    // Encapsulated game state
     int currentLevel;
     bool isGameOver;
     float getCurrentTime() const;
     float startTime;
     int currentSeasonIndex;
     
-    // OOP Components
     Player* player;
     Season* currentSeason;
     
-    // GUI-specific state
+
     bool harvested[3];
     int totalPoints;
     
@@ -39,11 +37,11 @@ private:
     void advanceToNextSeason();
     
 public:
-    // Constructor & Destructor (RAII)
+    // Constructor and Destructor 
     Game();
     ~Game();
     
-    // Game lifecycle methods (Abstraction)
+    // Game lifecycle methods 
     void startGame();
     void endGame();
     bool isGameOverStatus() const;
@@ -73,4 +71,4 @@ public:
     void startSeasonTimer();
 };
 
-#endif // GAME_H
+#endif 

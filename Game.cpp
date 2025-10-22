@@ -20,7 +20,7 @@ Game::Game()
     player = new Player();
 }
 
-// Destructor - Clean up resources (RAII)
+// Destructor - Clean up resources and free memory
 Game::~Game() {
     cleanupSeason();
     if (player) {
@@ -206,7 +206,7 @@ bool Game::plantSeed(Plot& plot, int cropIndex) {
     plot.currentState = new Planted();
     plot.timeRemaining = selectedSeed->get_GrowTime();
     
-    // Call the OOP plant method
+    // Call the plant method
     selectedSeed->plant();
     
     return true;
@@ -223,7 +223,7 @@ int Game::harvestSeed(Plot& plot) {
         return 0;
     }
     
-    // Use OOP harvest method
+    // Use harvest method
     int pointsEarned = plot.plantedSeed->harvest();
     player->addPoints(pointsEarned);
     

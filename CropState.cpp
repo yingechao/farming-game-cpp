@@ -7,8 +7,6 @@ CropState::CropState() {
     stateName = "Unknown";
 }
 
-// Pure virtual function - implemented by derived classes
-// void CropState::updateGrowth(int) = 0;
 
-CropState::~CropState() {}
+CropState::~CropState() {} 
 

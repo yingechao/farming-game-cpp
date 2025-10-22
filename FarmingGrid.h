@@ -12,7 +12,6 @@ struct Button {
     std::string text; // text appears on the button
 };
 
-// Function declarations for design functions moved from main.cpp to FarmingGrid.cpp
 bool MouseInside(Rectangle area);
 bool isButtonClicked(Rectangle button);
 int GetCenterText(std::string text, int fontSize, int screenWidth);
@@ -20,4 +19,4 @@ void DrawSimpleButton(Button b, int fontSize);
 std::string ReadTextFile(std::string filePath);
 std::vector<std::string> SplitLines(std::string instructions);
 
-#endif // FARMING_GRID_H
+#endif 

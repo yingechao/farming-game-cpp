@@ -8,7 +8,7 @@ enum class Screen {
     INSTRUCTIONS 
 };
 
-// Forward declaration: implemented in FarmingGrid.cpp
+// run farming grid function
 void RunFarmingGrid();
 
 int main() {
@@ -45,9 +45,9 @@ int main() {
     backButton.box = { 20, 20, 140, 50};
     backButton.text = "BACK";
 
-    // -------- main loop for button navigation --------
+    // button navigation loop
     while (!WindowShouldClose()) {
-        // --- UPDATE ---
+       
         if (currentScreen == Screen::MENU) {
 
             // Start button is pressed
@@ -55,7 +55,7 @@ int main() {
                 // close the menu window
                 CloseWindow();                 // 1) close menu window
                 // run the farming grid in a new window (switch)
-                RunFarmingGrid();              // 2) open & run farming window
+                RunFarmingGrid();              // 2) open and run farming window
 
                 //Re-open the menu window or next window as game progresses
                 InitWindow(screenWidth, screenHeight, "Farm Game (Menu)"); // 3) recreate menu

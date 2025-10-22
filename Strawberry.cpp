@@ -4,7 +4,7 @@
 
 // Initializes a Strawberry seed by calling the base Seed constructor
 Strawberry::Strawberry() : Seed("Strawberry", 7, 15) {
-  pointsUnlockThreshold = 15; // Unlock after earning 15 points (1 potato harvest)
+  pointsUnlockThreshold =40; // Unlock after earning 15 points (1 potato harvest)
 }
 
 // Overrides the base plant() method with a strawberry-specific message.

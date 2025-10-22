@@ -4,7 +4,7 @@
 #include "Seed.h"
 
 Peas::Peas() : Seed("Peas", 7, 25) {
-    pointsUnlockThreshold = 70;
+    pointsUnlockThreshold = 180;
 }
 
 void Peas::grow() {

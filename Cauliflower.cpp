@@ -4,7 +4,7 @@
 #include "Seed.h"
 
 Cauliflower::Cauliflower() : Seed("Cauliflower", 10, 20) {
-  pointsUnlockThreshold = 30; // Unlock after earning 30 points (2 potatoes + 1 strawberry)
+  pointsUnlockThreshold = 100; 
 }
 
 void Cauliflower::grow() {

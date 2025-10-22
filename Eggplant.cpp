@@ -3,7 +3,7 @@
 #include <iostream>
 
 Eggplant::Eggplant() : Seed("Eggplant", 8, 18) {
-    pointsUnlockThreshold = 60;
+    pointsUnlockThreshold = 140;
 }
 
 void Eggplant::grow() {

@@ -3,7 +3,7 @@
 #include <iostream>
 
 Wheat::Wheat() : Seed("Wheat", 8, 18) {
-    pointsUnlockThreshold = 35;
+    pointsUnlockThreshold = 65;
 }  // initialize base Seed
 
 void Wheat::grow() {

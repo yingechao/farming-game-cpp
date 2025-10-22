@@ -24,10 +24,9 @@ Season::Season(std::string seasonName, int limit)
 }
 
 // Destructor
-// Cleans up dynamically allocated Seed objects when the Season object is
-// destroyed.
+
 Season::~Season() {
-  for (auto seed : seeds) delete seed;  // free memory for each Seed pointer
+  for (auto seed : seeds) delete seed;  // deallocat memory for each Seed pointer
   seeds.clear();                        // empty the vector after deletion
 }
 
@@ -39,8 +38,8 @@ std::vector<std::string> Season::getSeedList() { return seedTypes; }
 int Season::getRequiredPoints() { return requiredPoints; }
 
 // Load seeds based on season
-// Creates new Seed objects and stores them in the vector.
-// The first seed is automatically unlocked.
+// Creates new Seed objects and stores them in the vector
+// The first seed is automatically unlocked
 void Season::loadSeeds() {
   if (name == "Spring") {
     seeds.push_back(new Potato());
@@ -65,8 +64,7 @@ void Season::loadSeeds() {
 }
 
 // Get current seed
-// Returns a pointer to the currently active Seed.
-// Pointer to the current Seed object, or nullptr if none.
+// Returns a pointer to the current seed, and this is either a pointer to the current Seed object, or nullptr if none
 Seed* Season::getCurrentSeed() {
   if (currentSeedIndex < seeds.size()) return seeds[currentSeedIndex];
   return nullptr;
@@ -76,7 +74,7 @@ Seed* Season::getCurrentSeed() {
 bool Season::hasMoreSeeds() { return currentSeedIndex < seeds.size(); }
 
 // Unlock next seed
-// return Pointer to the next Seed object, or nullptr if all done.
+// return Pointer to the next Seed object, or nullptr if all done
 Seed* Season::unlockNextSeed() {
   if (currentSeedIndex + 1 < seeds.size()) {
     currentSeedIndex++;
@@ -98,22 +96,22 @@ bool Season::isCurrentSeedAvailable() {
 // Returns true if all seeds have been harvested
 bool Season::allSeedsCompleted() {
   for (auto seed : seeds) {
-    if (!seed->get_HarvestStatus())  // assumes Seed has getHarvestStatus()
+    if (!seed->get_HarvestStatus())  
       return false;
   }
   return true;
 }
 
-// Reset the season: marks all seeds as unharvested and resets index
+// Reset the season
 void Season::resetSeason() {
   currentSeedIndex = 0;
   for (auto seed : seeds) {
-    seed->reset();  // assumes Seed has reset() method
+    seed->reset();  
   }
 }
 
-// Checks if the growing time for the current seed has expired.
-// return True if the elapsed time >= the seed’s grow time.
+// Checks if the growing time for the current seed is finished
+// return True if the elapsed time >= the seed’s grow time
 bool Season::isSeedTimeUp(float elapsedTime) {
   if (currentSeedIndex < seeds.size()) {
     Seed* current = seeds[currentSeedIndex];
@@ -123,5 +121,5 @@ bool Season::isSeedTimeUp(float elapsedTime) {
 }
 
 
-// Returns true if the season has been marked as completed.
+// Returns true if the season has been marked as completed
 bool Season::isCompleted() { return completed; }
