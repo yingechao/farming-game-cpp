@@ -4,6 +4,7 @@
 #include "raylib.h"
 #include <string>
 #include <vector>
+#include "Plot.h"
 
 //This struct creates a clickable button on the screen and has text written on it
 struct Button { 

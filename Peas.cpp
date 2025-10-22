@@ -22,3 +22,7 @@ void Peas::plant() {
   std::cout << "Planting Peas specifically!\n";
   grow();
 }
+
+Seed* Peas::clone() const {
+  return new Peas();
+}

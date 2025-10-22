@@ -150,32 +150,34 @@ struct CropAttributes {
     Color color;           // visual while growing
 };
 
-struct Plot {
-    Rectangle grid;           // draw rect (keep for GUI)
-    Seed* plantedSeed;        // OOP: pointer to planted seed
-    CropState* currentState;  // OOP: current crop state
-    float timeRemaining;      // countdown until the crop is ready to be harvested
+// Plot struct implementation
+void Plot::Clear() { 
+    if (plantedSeed) {
+        delete plantedSeed;  // Delete cloned seeds created for this plot
+        plantedSeed = nullptr;
+    }
+    if (currentState) {
+        delete currentState;  // Delete crop state
+        currentState = nullptr;
+    }
+    // Ensure pointers are initialized to nullptr
+    plantedSeed = nullptr;
+    currentState = nullptr;
+    timeRemaining = 0.0f; 
+}
 
-    void Clear() { 
-        plantedSeed = nullptr; 
-        currentState = nullptr; 
-        timeRemaining = 0.0f; 
-    }
-    
-    // Helper methods for GUI compatibility
-    int getState() const {
-        if (!plantedSeed) return 0;  // empty
-        if (!currentState) return 0; // empty
-        if (currentState->isDoneGrowing()) return 2; // ready
-        return 1; // growing
-    }
-    
-    int getCropIndex() const {
-        if (!plantedSeed) return -1;
-        // This will be determined by the season's seed order
-        return -1; // Will be set by season logic
-    }
-};
+int Plot::getState() const {
+    if (!plantedSeed) return 0;  // empty
+    if (!currentState) return 0; // empty
+    if (timeRemaining <= 0.0f) return 2; // ready
+    return 1; // growing
+}
+
+int Plot::getCropIndex() const {
+    if (!plantedSeed) return -1;
+    // This will be determined by the season's seed order
+    return -1; // Will be set by season logic
+}
 
 struct GameState {
     // OOP Integration - Now using Game for encapsulation
@@ -625,6 +627,12 @@ void RunFarmingGrid() {
     inventoryA.height = 380;
 
     Plot plots[4]; // creates 4 farming plots
+    // Initialize all plots
+    for (int i = 0; i < 4; i++) {
+        plots[i].plantedSeed = nullptr;
+        plots[i].currentState = nullptr;
+        plots[i].timeRemaining = 0.0f;
+    }
 
      // how much space between the cells
     float gapCell = 20.0f;

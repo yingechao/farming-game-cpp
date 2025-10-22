@@ -33,9 +33,6 @@ class Player {
   void selectSeed(
       string seedType);  // Select a seed to use, based on the seed type
 
-  void plantSeed();      // Plant the currently selected seed
-  void growCrop();       // Grow the currently planted seed/crop
-  void harvestCrop();    // Harvest the currently grown crop
   void resetProgress();  // clears harvested crops and current seed, but does
                          // not delete seedsOwned
 

@@ -15,6 +15,7 @@ class Lettuce : public Seed {
   int harvest() override;
   void reset() override;
   void plant() override;
+  Seed* clone() const override;
 };
 
 #endif

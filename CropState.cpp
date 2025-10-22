@@ -7,24 +7,8 @@ CropState::CropState() {
     stateName = "Unknown";
 }
 
-void CropState::setGrowthProgress(int growthProgress) {
-    this->growthProgress = growthProgress;
-}
-
-int CropState::getGrowthProgress() { return growthProgress; }
-
-void CropState::updateGrowth() { ///////////////////do we use this function?
-    // Simple default growth update: increment progress and set harvestable
-    growthProgress++;
-    if (growthProgress >= 100) isHarvestable = true;
-}
-
-void CropState::getStatus() {
-    std::cout << "State: " << stateName << " | Progress: " << growthProgress
-                        << " | Harvestable: " << (isHarvestable ? "yes" : "no") << "\n";
-}
-
-bool CropState::isDoneGrowing() { return isHarvestable == true; }
+// Pure virtual function - implemented by derived classes
+// void CropState::updateGrowth(int) = 0;
 
 CropState::~CropState() {}
 

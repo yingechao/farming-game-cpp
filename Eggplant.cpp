@@ -21,3 +21,7 @@ void Eggplant::plant() {
   std::cout << "Planting Eggplant specifically!\n";
   grow();
 }
+
+Seed* Eggplant::clone() const {
+  return new Eggplant();
+}

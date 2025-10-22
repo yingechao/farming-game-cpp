@@ -28,19 +28,23 @@ class Seed {
   // Determines whether the seed is ready for harvest.
   bool isReadyToHarvest() const;
 
-  // Simulates planting the seed. Can be overridden for specific seed types
-  virtual void plant();
-  // Simulates the seed's growth over time. Can be customized by child classes
-  virtual void grow();
-  // Simulates harvesting the seed. Returns its value
-  virtual int harvest();
-  // Resets the seed's state
-  virtual void reset();
+  // pure virtual function for planting the seed
+  virtual void plant() = 0;
+  // pure virtual function for growing the seed
+  virtual void grow() = 0;
+  // pure virtual function for harvesting the seed
+  virtual int harvest() = 0;
+  // pure virtual function for resetting the seed's state
+  virtual void reset() = 0;
+  
+  // Creates a copy of this seed for planting. this creates a new instance of the seed so plots do not share the same object
+  // clone function for memory management ---- cloned seeds are owned by each plot. the plot::clear() function will delete the cloned seed
+  virtual Seed* clone() const = 0;
 
-  // Returns the points threshold needed to unlock this seed
+  // Returns the points threshold needed for unlocking the seed
   int getPointsUnlockThreshold() const;
 
-  // Virtual destructor ensures proper cleanup for derived classes
+  // Virtual destructor 
   virtual ~Seed() {}
 };
 

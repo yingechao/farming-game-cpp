@@ -26,3 +26,8 @@ int Strawberry::harvest() {
 
 // resets  harvested status of strawberry and keeps false
 void Strawberry::reset() { isHarvested = false; }
+
+// Creates a copy of this strawberry seed
+Seed* Strawberry::clone() const {
+  return new Strawberry();
+}

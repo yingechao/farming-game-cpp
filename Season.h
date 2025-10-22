@@ -38,8 +38,6 @@ class Season {
   std::string get_Name();   // Returns the name of the season
 
   // Season methods
-  void start_Season();  // Starts the season, initializing timers and loading
-                        // available seeds.
   void update();        // Updates the state of the season (e.g., checks growth
                         // progress or timers).
   void resetSeason();   // Resets the season to its initial state for replaying
@@ -59,9 +57,6 @@ class Season {
   bool isSeedTimeUp(
       float elapsedTime);  // return True if time is up, otherwise false.
 
-  void advanceSeed();  // Advances the index to the next seed in the season.
-
-  void endSeason();    // Marks the season as completed
   bool isCompleted();  // Returns true if season ended
 };
 

@@ -40,38 +40,6 @@ void Player::selectSeed(string seedType) {
        << endl;  // Seed not in collection
 }
 
-// Plant the currently selected seed
-void Player::plantSeed() {
-  if (!currentSeed) {  // Check if a seed has been selected
-    std::cout << "No seed selected!\n";
-    return;
-  }
-  std::cout << "Planting " << currentSeed->get_Name() << "...\n";
-  currentSeed->plant();  // Call the Seed's plant method
-}
-
-// Grow the currently selected seed
-void Player::growCrop() {
-  if (!currentSeed) {
-    std::cout << "No seed selected to grow!\n";
-    return;
-  }
-  currentSeed->grow();  // Call the Seed's grow method
-}
-
-// Harvest the currently selected seed
-void Player::harvestCrop() {
-  if (!currentSeed) {
-    std::cout << "No seed selected to harvest!\n";
-    return;
-  }
-  int pointsEarned = currentSeed->harvest();  // Call Seed's harvest method
-  if (pointsEarned > 0) {
-    addPoints(pointsEarned);  // Add earned points to player
-    std::cout << "Harvested " << currentSeed->get_Name() << "! Earned "
-              << pointsEarned << " points.\n";
-  }
-}
 
 // Reset player progress for a season
 // Clears references but does NOT delete seeds themselves

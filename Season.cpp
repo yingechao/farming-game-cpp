@@ -94,21 +94,6 @@ bool Season::isCurrentSeedAvailable() {
   return currentSeedIndex >= 0 && currentSeedIndex < seeds.size();
 }
 
-// Called when the season starts
-void Season::start_Season() {
-  currentSeedIndex = 0;
-  if (!seeds.empty()) unlockNextSeed();  // unlock first seed
-
-  std::cout << "Starting " << name << " season!" << std::endl;
-  std::cout << "Loading seeds..." << std::endl;
-
-  for (Seed* s : seeds) {
-    std::cout << "Seed: " << s->get_Name()
-              << " - Grow time: " << s->get_GrowTime() << " seconds\n";
-  }
-
-  std::cout << "Season loop starting..." << std::endl;
-}
 
 // Returns true if all seeds have been harvested
 bool Season::allSeedsCompleted() {
@@ -137,21 +122,6 @@ bool Season::isSeedTimeUp(float elapsedTime) {
   return false;
 }
 
-// Moves the index to the next seed in the vector.
-void Season::advanceSeed() {
-  if (!seeds.empty() && currentSeedIndex < seeds.size() - 1) {
-    currentSeedIndex++;
-  } else {
-    // All seeds done
-    std::cout << "Season " << name << " completed!\n";
-  }
-}
-
-// Marks the season as completed and prints a message
-void Season::endSeason() {
-  cout << "Season " << name << " completed!\n";
-  completed = true;
-}
 
 // Returns true if the season has been marked as completed.
 bool Season::isCompleted() { return completed; }

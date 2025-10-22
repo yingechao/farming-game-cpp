@@ -13,15 +13,12 @@
 #include "Planted.h"
 #include "Harvestable.h"
 #include "Harvested.h"
-
-// Forward declaration for Plot struct
-struct Plot;
+#include "Plot.h"
 
 class Game {
 private:
     // Encapsulated game state
     int currentLevel;
-    int timeLimit;
     bool isGameOver;
     float getCurrentTime() const;
     float startTime;
@@ -53,8 +50,6 @@ public:
     
     // Season management
     void nextLevel();
-    void handleTimeOut();
-    bool isTimeUp() const;
     bool checkProgress() const;
     
     // Player interaction methods

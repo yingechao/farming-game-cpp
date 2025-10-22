@@ -13,6 +13,7 @@ class Strawberry : public Seed {
   void grow() override;    // Grow the seed
   int harvest() override;  // Harvest the seed
   void reset() override;   // Reset the seed
+  Seed* clone() const override; // Clone the seed
 };
 
 #endif

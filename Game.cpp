@@ -1,31 +1,9 @@
 #include "Game.h"
 #include <iostream>
 
-// Include Plot struct definition
-struct Plot {
-    struct Rectangle { float x, y, width, height; } grid;
-    Seed* plantedSeed;
-    CropState* currentState;
-    float timeRemaining;
-    
-    void Clear() { 
-        plantedSeed = nullptr; 
-        currentState = nullptr; 
-        timeRemaining = 0.0f; 
-    }
-    
-    int getState() const {
-        if (!plantedSeed) return 0;
-        if (!currentState) return 0;
-        if (currentState->isDoneGrowing()) return 2;
-        return 1;
-    }
-};
-
 // Constructor - Initialize game state
 Game::Game()
     : currentLevel(1),
-      timeLimit(60),
       isGameOver(false),
       startTime(0.0f),
       currentSeasonIndex(0),
@@ -188,20 +166,6 @@ void Game::nextLevel() {
     advanceToNextSeason();
 }
 
-// Handle timeout - restart current level
-void Game::handleTimeOut() {
-    std::cout << "Time's up! Restarting level." << std::endl;
-    initializeSeason();
-}
-
-// Check if season time has expired
-bool Game::isTimeUp() const {
-    if (!currentSeason) return false;
-    
-    float elapsed = getCurrentTime() - startTime;
-    return elapsed >= currentSeason->getTimeLimit();
-}
-
 // Check if all progress is complete
 bool Game::checkProgress() const {
     return checkSeasonProgress();
@@ -233,16 +197,14 @@ bool Game::plantSeed(Plot& plot, int cropIndex) {
         return false;
     }
     
-    // Get the selected seed and plant it
-    Seed* selectedSeed = seeds[cropIndex];
+    // Get the selected seed template and create a new instance for this plot
+    Seed* seedTemplate = seeds[cropIndex];
+    Seed* selectedSeed = seedTemplate->clone();
     
     // Set up the plot
     plot.plantedSeed = selectedSeed;
     plot.currentState = new Planted();
     plot.timeRemaining = selectedSeed->get_GrowTime();
-    
-    // Reset the seed's harvest status
-    selectedSeed->reset();
     
     // Call the OOP plant method
     selectedSeed->plant();
@@ -257,7 +219,7 @@ int Game::harvestSeed(Plot& plot) {
         return 0;
     }
     
-    if (!plot.plantedSeed || !plot.currentState || !player) {
+    if (!plot.plantedSeed || !player) {
         return 0;
     }
     
@@ -294,6 +256,10 @@ void Game::updateGrowth(Plot& plot, float timeFrame) {
         // Check if growth is complete
         if (plot.timeRemaining <= 0.0f) {
             plot.timeRemaining = 0.0f;
+            // Update crop state to harvestable
+            if (plot.currentState) {
+                delete plot.currentState;
+            }
             plot.currentState = new Harvestable();
         }
     }
@@ -320,7 +286,7 @@ float Game::getSeasonTimeLeft() const {
     if (!currentSeason) return 0.0f;
     
     float elapsed = getCurrentTime() - startTime;
-    float remaining = timeLimit - elapsed;
+    float remaining = currentSeason->getTimeLimit() - elapsed;
     return (remaining > 0.0f) ? remaining : 0.0f;
 }
 
