@@ -1,4 +1,25 @@
+# Farming Simulation Game (C++)
+## Overview
+A farming simulation game developed in C++ featuring both a command-line interface and a graphical user interface built with Raylib. The game uses object-oriented design principles to manage seasonal progression, crop lifecycles, and player interaction.
+## Screenshots 
+![Main Game](images/start_menu.png)
+![Inventory](images/spring_screen.png)
 
+## Features
+* Dual implementation: console + GUI version
+* Seasonal progression system (Spring → Winter)
+* Crop lifecycle: plant → grow → harvest
+* Time-based gameplay and scoring system
+* Multiple crop types with unique behaviours
+* Object-oriented architecture (inheritance, polymorphism, state pattern)
+
+## Concepts
+* Object-Oriented Programming (OOP)
+* State management using class design
+* Polymorphism for dynamic crop behaviour
+* Modular system design
+
+## Set-up and Installation
 ## Prerequisites
 
 - **Raylib library** (for the GUI version)
@@ -69,4 +90,6 @@ g++ -o gui_farming_game RaylibOpeningSlide.cpp FarmingGrid.cpp -lraylib -lm -lpt
 - `Season.cpp/h` - Season management
 - Various crop files (`Carrot.cpp`, `Tomato.cpp`, etc.) - Individual crop implementations
 
-## University of Adelaide OOP Project
+## Future Improvements
+* Enhanced GUI and animations
+* Save/load functionality
