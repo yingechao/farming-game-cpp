@@ -19,6 +19,15 @@ A farming simulation game developed in C++ featuring both a command-line interfa
 * Polymorphism for dynamic crop behaviour
 * Modular system design
 
+## Development
+This project was developed as part of a team of three. 
+**My Contributions:**
+- Designed and implemented the core object-oriented architecture
+- Applied inheritance, polymorphism, and state-based design for crop behaviour
+- Developed core systems for player logic, crop lifecycle, and game state management
+- Integrated the GUI with the underlying OOP system, ensuring interaction between interface and game logic
+- Improved overall modularity and code structure
+
 ## Set-up and Installation
 ## Prerequisites
 
